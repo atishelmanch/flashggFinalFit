@@ -22,24 +22,24 @@ class Wrap:
         self.queue = queue
         self.func = func
         self.args = args
-        
+
     def __call__(self):
         ret = self.func( *self.args )
         self.queue.put( ret  )
 
-    
+
 class Parallel:
     def __init__(self,ncpu):
         self.running = Queue(ncpu)
         self.returned = Queue()
         self.njobs = 0
-  
+
     def run(self,cmd,args):
         wrap = Wrap( self, (cmd,args), self.returned )
         self.njobs += 1
         thread = Thread(None,wrap)
         thread.start()
-        
+
     def __call__(self,cmd,args):
         if type(cmd) == str:
             print cmd
@@ -48,7 +48,7 @@ class Parallel:
             args = (cmd,)
             cmd = commands.getstatusoutput
         self.running.put((cmd,args))
-        ret = cmd( *args ) 
+        ret = cmd( *args )
         self.running.get()
         self.running.task_done()
         return ret
@@ -68,6 +68,7 @@ def getFilesFromDatacard(datacard):
 
 parser = OptionParser()
 parser.add_option("-i","--infile",help="Signal Workspace")
+parser.add_option("-w","--website",help="Website address to save plots")
 parser.add_option("-q","--queue",default="espresso",help="Which batch queue")
 parser.add_option("--runLocal",default=False,action="store_true",help="Run locally")
 parser.add_option("--batch",default="HTCONDOR",help="Which batch system to use (HTCONDOR,IC)")
@@ -157,7 +158,7 @@ def writePostamble(sub_file, exec_line):
 
 #######################################
 
-  
+
 system('mkdir -p %s/fTestJobs/outputs'%opts.outDir)
 counter=0
 for proc in  opts.procs.split(","):
@@ -166,5 +167,5 @@ for proc in  opts.procs.split(","):
     file = open('%s/fTestJobs/sub%d.sh'%(opts.outDir,counter),'w')
     writePreamble(file)
     counter =  counter+1
-    exec_line = "%s/bin/signalFTest -i %s  -p %s -f %s --considerOnly %s -o %s/%s --datfilename %s/%s/fTestJobs/outputs/config_%d.dat --analysis %s --verbose %s" %(os.getcwd(), opts.infile,proc,opts.flashggCats,cat,os.getcwd(),opts.outDir,os.getcwd(),opts.outDir, counter, opts.analysis, opts.verbose)
+    exec_line = "%s/bin/signalFTest -i %s -w %s -p %s -f %s --considerOnly %s -o %s/%s --datfilename %s/%s/fTestJobs/outputs/config_%d.dat --analysis %s --verbose %s" %(os.getcwd(), opts.infile,opts.website,proc,opts.flashggCats,cat,os.getcwd(),opts.outDir,os.getcwd(),opts.outDir, counter, opts.analysis, opts.verbose)
     writePostamble(file,exec_line) #includes submission

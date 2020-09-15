@@ -20,6 +20,7 @@ crabConfig_*
 *_cc.so
 *_C.d
 *_C.so
+*.cxx
 *\#*
 .\#*
 AutoDict_*
@@ -37,3 +38,7 @@ AutoDict_*
 # Output dirs in signal and bkg
 Signal/outdir_*
 Background/outdir_*
+Signal/bin/
+Signal/lib/
+Background/bin/
+Background/lib/

@@ -42,7 +42,7 @@ template<class ResultT, class SourceT, class PredicateT> typename ResultT::itera
 }
 
 // the FinalModelConstruction class takes the fits from the fitting/interpolation classes and adds the systematic nuisances and figures out the normalisation.
-FinalModelConstruction::FinalModelConstruction( std::vector<int> massList, RooRealVar *massVar, RooRealVar *MHvar, RooRealVar *intL,int mhLow, int mhHigh, string proc, string cat, bool doSecMods, string systematicsFileName, vector<int> skipMasses, int verbosity,std::vector<std::string> procList, std::vector<std::string> flashggCats , string outDir, bool isProblemCategory ,bool isCB, int sqrts, int year, bool quadraticSigmaSum, string FinalState)	:
+FinalModelConstruction::FinalModelConstruction( std::vector<int> massList, RooRealVar *massVar, RooRealVar *MHvar, RooRealVar *intL,int mhLow, int mhHigh, string proc, string cat, bool doSecMods, string systematicsFileName, vector<int> skipMasses, int verbosity,std::vector<std::string> procList, std::vector<std::string> flashggCats , string outDir, string website, string HHWWggLabel, bool isProblemCategory ,bool isCB, int sqrts, int year, bool quadraticSigmaSum, string FinalState)	:
   mass(massVar),
   MH(MHvar),
   intLumi(intL),
@@ -51,6 +51,8 @@ FinalModelConstruction::FinalModelConstruction( std::vector<int> massList, RooRe
   proc_(proc),
   cat_(cat),
   outDir_(outDir),
+  website_(website),
+  HHWWggLabel_(HHWWggLabel),
   isProblemCategory_(isProblemCategory),
   doSecondaryModels(doSecMods),
   isCutBased_(isCB),
@@ -1408,6 +1410,8 @@ void FinalModelConstruction::getNormalization(){
      pol=pol0;
      temp->Fit(pol,"Q");
   }
+  temp->SetMinimum(0.01);
+  temp->SetMaximum(0.6);
   temp->Draw();
   temp->Fit(pol,"Q");
   TPaveText *pt = new TPaveText(.25,.9,.9,1.0,"NDC");
@@ -1416,7 +1420,8 @@ void FinalModelConstruction::getNormalization(){
   pt->Draw() ;
   tc_lc->Print(Form("%s/%s_%s_ea_fit_to_pol2.png",outDir_.c_str(),proc_.c_str(),catname.c_str()));
   tc_lc->Print(Form("%s/%s_%s_ea_fit_to_pol2.pdf",outDir_.c_str(),proc_.c_str(),catname.c_str()));
-
+  tc_lc->Print(Form("%s/EfficiencyAcceptance/%s_%s_ea_fit_to_pol2_%s.png",website_.c_str(),proc_.c_str(),catname.c_str(),HHWWggLabel_.c_str()));
+  tc_lc->Print(Form("%s/EfficiencyAcceptance/%s_%s_ea_fit_to_pol2_%s.pdf",website_.c_str(),proc_.c_str(),catname.c_str(),HHWWggLabel_.c_str()));
   //turn that graph into a spline!
   TGraph *eaGraph = new TGraph(pol);
   RooSpline1D *eaSpline = graphToSpline(Form("fea_%s_%s_%dTeV",proc_.c_str(),catname.c_str(),sqrts_),eaGraph);

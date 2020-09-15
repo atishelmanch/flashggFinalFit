@@ -1,4 +1,4 @@
-#ifndef FinalModelConstruction_h 
+#ifndef FinalModelConstruction_h
 #define FinalModelConstruction_h
 
 #include <iostream>
@@ -27,8 +27,8 @@
 class FinalModelConstruction {
 
   public:
-    
-    FinalModelConstruction( std::vector<int> massList, RooRealVar *massVar, RooRealVar *MHvar, RooRealVar *intL, int mhLow, int mhHigh, std::string proc, std::string cat, bool doSecMods, std::string systematicsFileName, std::vector<int> skipMasses, int verbosity, std::vector<std::string> procsList, std::vector<std::string> flashggCats , string outDir,bool isProblemCategory,bool isCB=false, int sqrts=13, int year=2016, bool quadraticSigmaSum=false, std::string FinalState="");
+
+    FinalModelConstruction( std::vector<int> massList, RooRealVar *massVar, RooRealVar *MHvar, RooRealVar *intL, int mhLow, int mhHigh, std::string proc, std::string cat, bool doSecMods, std::string systematicsFileName, std::vector<int> skipMasses, int verbosity, std::vector<std::string> procsList, std::vector<std::string> flashggCats , string outDir, string website, string HHWWggLabel, bool isProblemCategory,bool isCB=false, int sqrts=13, int year=2016, bool quadraticSigmaSum=false, std::string FinalState="");
     ~FinalModelConstruction();
 
 		void loadSignalSystematics(std::string filename);
@@ -47,7 +47,7 @@ class FinalModelConstruction {
 		RooAbsReal *getMeanWithPhotonSyst(RooAbsReal *dm, string name, bool isMH2=false, bool isMHSM=false);
 		RooAbsReal *getSigmaWithPhotonSyst(RooAbsReal *sig_fit, string name);
 		RooAbsReal *getRateWithPhotonSyst(string name);
-    
+
 		void setRVsplines(std::map<std::string,RooSpline1D*> splines);
     void setWVsplines(std::map<std::string,RooSpline1D*> splines);
     void setSTDsplines(std::map<std::string,RooSpline1D*> splines);
@@ -69,7 +69,7 @@ class FinalModelConstruction {
     void save(RooWorkspace *work);
 
   private:
-    
+
     RooRealVar *mass;
     RooRealVar *MH;
     RooRealVar *intLumi;
@@ -78,6 +78,8 @@ class FinalModelConstruction {
     std::string proc_;
     std::string cat_;
     std::string outDir_;
+    std::string website_;
+    std::string HHWWggLabel_;
     int nIncCats_;
     bool isProblemCategory_;
     bool doSecondaryModels;
@@ -109,7 +111,7 @@ class FinalModelConstruction {
     std::map<int,RooDataSet*> rvFITDatasets;
     std::map<int,RooDataSet*> wvFITDatasets;
     std::map<int,RooDataSet*> fitDatasets;
-   
+
 	 	// vertex and r9 nuisances
     RooRealVar *vertexNuisance;
 		RooRealVar *r9barrelNuisance;
@@ -163,13 +165,13 @@ class FinalModelConstruction {
 		std::vector<std::string> photonCatSmearsCorr;
 		std::vector<std::string> globalScales;
 		std::vector<std::string> globalScalesCorr;
-		// these are required to know specific options about further scaling 
+		// these are required to know specific options about further scaling
 		std::map<std::string,std::vector<std::pair<string,float> > > globalScalesOpts;
 		std::map<std::string,std::vector<std::pair<string,float> > > globalScalesCorrOpts;
 		std::vector<std::string> systematicsList;
 		std::vector<float> systematicsCorr;
 		std::vector<int> systematicsIdx;
-		
+
 		std::vector<std::string> photonCats;
 		std::map<std::string,std::map<int,std::map<std::string,double> > > meanSysts;
 		std::map<std::string,std::map<int,std::map<std::string,double> > > sigmaSysts;
@@ -181,7 +183,7 @@ class FinalModelConstruction {
 		// utility funcs
 		void addToSystematicsList(std::vector<std::string> systs);
 		void addToSystematicsList(vector<string>::iterator begin, vector<string>::iterator end);
-		
+
 		bool isGlobalSyst(std::string name);
 		bool isPerCatSyst(std::string name);
 		bool isHighR9cat();

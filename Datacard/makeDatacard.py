@@ -27,9 +27,9 @@ stxsBinMergingScheme = {'ggH_VBFlike':['ggH_GE2J_MJJ_350_700_PTH_0_200_PTHJJ_0_2
                         'WH_lep':['WH_lep_PTV_0_75','WH_lep_PTV_75_150','WH_lep_PTV_150_250_0J','WH_lep_PTV_150_250_GE1J','WH_lep_PTV_GT250'],
                         'WH_lep_high':['WH_lep_PTV_75_150','WH_lep_PTV_150_250_0J','WH_lep_PTV_150_250_GE1J','WH_lep_PTV_GT250'],
                         'ZH_lep':['ZH_lep_PTV_0_75','ZH_lep_PTV_75_150','ZH_lep_PTV_150_250_0J','ZH_lep_PTV_150_250_GE1J','ZH_lep_PTV_GT250'],
-                        #'top':['ttH_PTH_0_60','ttH_PTH_60_120','ttH_PTH_120_200','ttH_PTH_200_300','ttH_PTH_GT300','tHq'], 
-                        'ttH':['ttH_PTH_0_60','ttH_PTH_60_120','ttH_PTH_120_200','ttH_PTH_200_300','ttH_PTH_GT300'], 
-                        'ttH_low':['ttH_PTH_0_60','ttH_PTH_60_120'], 
+                        #'top':['ttH_PTH_0_60','ttH_PTH_60_120','ttH_PTH_120_200','ttH_PTH_200_300','ttH_PTH_GT300','tHq'],
+                        'ttH':['ttH_PTH_0_60','ttH_PTH_60_120','ttH_PTH_120_200','ttH_PTH_200_300','ttH_PTH_GT300'],
+                        'ttH_low':['ttH_PTH_0_60','ttH_PTH_60_120'],
                         'ttH_high':['ttH_PTH_120_200','ttH_PTH_200_300','ttH_PTH_GT300']
                        }
 lumi = {'2016':'35.9', '2017':'41.5', '2018':'59.8'}
@@ -81,7 +81,7 @@ signal_shape_systematics = [
 	      ]
 
 # EXPERIMENTAL SYSTEMATICS
-experimental_systematics = [ 
+experimental_systematics = [
 		{'name':'lumi_13TeV','title':'lumi_13TeV','type':'constant','prior':'lnN','correlateAcrossYears':0,'value':{'2016':'1.025','2017':'1.023','2018':'1.025'}},
 		{'name':'LooseMvaSF','title':'CMS_hgg_LooseMvaSF','type':'factory','prior':'lnN','correlateAcrossYears':0},
 		{'name':'PreselSF','title':'CMS_hgg_PreselSF','type':'factory','prior':'lnN','correlateAcrossYears':1},
@@ -111,7 +111,7 @@ experimental_systematics = [
 # Relations: shape = ishape/inorm
 #            norm  = inorm/inc
 # Specify as list in dict: e.g. 'tiers'=['inc','inorm','norm','ishape','shape']
-theory_systematics = [ 
+theory_systematics = [
 		{'name':'BR_hgg','title':'BR_hgg','type':'constant','prior':'lnN','correlateAcrossYears':1,'value':"0.98/1.021"},
 		#{'name':'THU_ggH_Mu','title':'CMS_hgg_THU_ggH_Mu','type':'factory','prior':'lnN','correlateAcrossYears':1,'tiers':['inorm']},
 		#{'name':'THU_ggH_Res','title':'CMS_hgg_THU_ggH_Res','type':'factory','prior':'lnN','correlateAcrossYears':1,'tiers':['inorm']},
@@ -149,10 +149,10 @@ def get_options():
   parser.add_option('--years', dest='years', default='2016', help="Comma separated list of years")
   parser.add_option('--procs', dest='procs', default='', help='Comma separated list of signal processes')
   parser.add_option('--cats', dest='cats', default='', help='Comma separated list of analysis categories (no year tags)')
-  parser.add_option('--modelWSDir', dest='modelWSDir', default='Models', help='Input model WS directory') 
-  parser.add_option('--inputWSDir', dest='inputWSDir', default='/vols/cms/jl2117/hgg/ws/test_stage1_1', help='Input WS directory (without year tag _201X)') 
-  parser.add_option('--saveDataFrame', dest='saveDataFrame', default='', help='Specify name of dataFrame if want to be saved') 
-  parser.add_option('--loadDataFrame', dest='loadDataFrame', default='', help='Load dataFrame. Crucial generated with same options or likely to fail!') 
+  parser.add_option('--modelWSDir', dest='modelWSDir', default='Models', help='Input model WS directory')
+  parser.add_option('--inputWSDir', dest='inputWSDir', default='/vols/cms/jl2117/hgg/ws/test_stage1_1', help='Input WS directory (without year tag _201X)')
+  parser.add_option('--saveDataFrame', dest='saveDataFrame', default='', help='Specify name of dataFrame if want to be saved')
+  parser.add_option('--loadDataFrame', dest='loadDataFrame', default='', help='Load dataFrame. Crucial generated with same options or likely to fail!')
   parser.add_option('--analysis', dest='analysis', default='', help='Analysis to run on')
   parser.add_option('--analysis_type', dest='analysis_type', default='', help='Analysis type, used in HHWWgg. Ex: Res, EFT, NMSSM')
   parser.add_option('--FinalState', dest='FinalState', default='', help='HHWWgg final state. Ex) qqlnu, lnulnu, qqqq')
@@ -165,7 +165,7 @@ def get_options():
 # For loading dataframe
 skipData = False
 if opt.loadDataFrame != '':
-  if os.path.exists("./hgg_dataFrames/%s.pkl"%opt.loadDataFrame): 
+  if os.path.exists("./hgg_dataFrames/%s.pkl"%opt.loadDataFrame):
     print " .........................................................................................."
     print " --> [VERBOSE] Loading dataFrame: ./hgg_dataFrames/%s.pkl"%opt.loadDataFrame
     print " --> [WARNING] Please ensure use same options as when dataFrame was generated"
@@ -175,11 +175,11 @@ if opt.loadDataFrame != '':
     print " --> [ERROR] Could not load dataFrame: ./hgg_dataFrame/%s. Leaving..."%opt.loadDataFrame
     leave()
 
-# Customize theory systematics for HHWWgg 
+# Customize theory systematics for HHWWgg
 if(opt.analysis=="HHWWgg"):
   theory_systematics = []
-  # remove MvaShift for now because found problem in flashgg 
-  experimental_systematics = [ 
+  # remove MvaShift for now because found problem in flashgg
+  experimental_systematics = [
 		{'name':'lumi_13TeV','title':'lumi_13TeV','type':'constant','prior':'lnN','correlateAcrossYears':0,'value':{'2016':'1.025','2017':'1.023','2018':'1.025'}},
 		{'name':'LooseMvaSF','title':'CMS_hgg_LooseMvaSF','type':'factory','prior':'lnN','correlateAcrossYears':0},
 		{'name':'PreselSF','title':'CMS_hgg_PreselSF','type':'factory','prior':'lnN','correlateAcrossYears':1},
@@ -201,13 +201,13 @@ if(opt.analysis=="HHWWgg"):
 # Calculate dataFrame
 if not skipData:
 
-  # At the moment HHWWgg workflow is different, so customizing for it 
+  # At the moment HHWWgg workflow is different, so customizing for it
 
   if(opt.analysis=="HHWWgg"):
     print'[year splitting] - doing nothing for HHWWgg'
     # ws_fileNames = []
-    # ws_fileNames.append(opt.inputWSDir) # if HHWWgg, one file (for now. later will have 2016, 2017, 2018) 
-  else: 
+    # ws_fileNames.append(opt.inputWSDir) # if HHWWgg, one file (for now. later will have 2016, 2017, 2018)
+  else:
     # Check if input WS exist: adding year tag
     for year in opt.years.split(","):
       print " --> Will take %s signal workspaces from %s_%s"%(year,opt.inputWSDir,year)
@@ -228,7 +228,7 @@ if not skipData:
       for root, dirs, files in os.walk( inputWSDir ):
         for fileName in files:
           if not fileName.startswith('output_') and (opt.analysis!="HHWWgg"): continue
-          if not fileName.endswith('.root'): continue 
+          if not fileName.endswith('.root'): continue
           ws_fileNames.append( fileName )
       # Concatenate with input dir to get full list of complete file names
       for fileName in ws_fileNames: wsFullFileNamesByYear[year] += "%s/%s,"%(inputWSDir,fileName)
@@ -237,7 +237,7 @@ if not skipData:
       # Extract processes from fileNames
       for fileName in ws_fileNames:
         if 'M125' not in fileName: continue
-        procsByYear[year].append( fileName.split("pythia8_")[1].split(".root")[0] )  
+        procsByYear[year].append( fileName.split("pythia8_")[1].split(".root")[0] )
 
       # Check equal and save as comma separated string
       if len(procsByYear) != 1:
@@ -274,19 +274,26 @@ if not skipData:
           _proc = "%s_%s_hgg"%(procToSTXS(proc),year)
           _proc_s0 = procToData(proc.split("_")[0])
 
+        print "_proc: ",_proc
+        print "_proc_s0: ",_proc_s0
+
         # If want to merge some categories
         if opt.mergeYears:
           if cat in mergedYear_cats: _cat = cat
           else: _cat = "%s_%s"%(cat,year)
         else: _cat = "%s_%s"%(cat,year)
 
+        print "_cat: ",_cat
         # Input flashgg ws
         if(opt.analysis=="HHWWgg"):
 
           if opt.analysis_type == "Res":
             HHWWgg_Mass = opt.inputWSDir.split('/')[-1].split('_')[0]
             _inputWSFile = opt.inputWSDir
-            _nominalDataName = "%s_%s_WWgg_%sgg_13TeV_%s"%(_proc_s0,HHWWgg_Mass,opt.FinalState,cat)
+            _nominalDataName = "%s_%s_HHWWgg_%s_13TeV_%s"%(_proc_s0,HHWWgg_Mass,opt.FinalState,cat)
+            print "HHWWgg_Mass: ",HHWWgg_Mass
+            print "_inputWSFile: ",_inputWSFile
+            print "_nominalDataName: ",_nominalDataName
           elif opt.analysis_type == "EFT":
             HHWWgg_node = opt.inputWSDir.split('/')[-1].split('_')[0]
             _inputWSFile = opt.inputWSDir
@@ -297,7 +304,7 @@ if not skipData:
             my = opt.inputWSDir.split('/')[-1].split('_')[1]
             _inputWSFile = opt.inputWSDir
             # dataname should be "NMSSM_XYHWWgg<FinalState>_MX300_MY170_13TeV_HHWWggTag_0"
-            _nominalDataName = "NMSSM_XYHWWgg%s_%s_%s_13TeV_%s"%(opt.FinalState,mx,my,cat)            
+            _nominalDataName = "NMSSM_XYHWWgg%s_%s_%s_13TeV_%s"%(opt.FinalState,mx,my,cat)
 
 
 
@@ -305,7 +312,7 @@ if not skipData:
           _inputWSFile = glob.glob("%s_%s/*M125*%s*"%(opt.inputWSDir,year,proc))[0]
           _nominalDataName = "%s_125_13TeV_%s"%(_proc_s0,cat)
 
-        # Input model ws 
+        # Input model ws
         if cat == "NOTAG": _modelWSFile, _model = '-', '-'
         else:
           if opt.analysis == "HHWWgg":
@@ -315,11 +322,11 @@ if not skipData:
             HHWWgg_Mass = opt.inputWSDir.split('/')[-1].split('_')[0]
             # _modelWSFile = "./%s/%s/CMS-HGG_sigfit_mva_%s_HHWWgg_qqlnu.root"%(opt.modelWSDir,opt.ext,HHWWgg_Mass)
             _modelWSFile = "./%s/%s/CMS-HGG_mva_13TeV_sigfit.root"%(opt.modelWSDir,opt.ext)
-            _model = "wsig_13TeV:hggpdfsmrel_13TeV_%s_%s"%(proc,cat)            
-            # _model = "wsig_13TeV:hggpdfsmrel_%s_13TeV_%s_%s"%(year,proc,cat)   # for signal need year   
-            # 
-            # 
-            #         
+            _model = "wsig_13TeV:hggpdfsmrel_13TeV_%s_%s"%(proc,cat)
+            # _model = "wsig_13TeV:hggpdfsmrel_%s_13TeV_%s_%s"%(year,proc,cat)   # for signal need year
+            #
+            #
+            #
 
           else:
             _modelWSFile = "./%s/signal_%s/CMS-HGG_sigfit_mva_%s_%s.root"%(opt.modelWSDir,year,proc,cat)
@@ -343,7 +350,7 @@ if not skipData:
       for cat in opt.cats.split(","):
         _proc_bkg = "bkg_mass"
         _proc_data = "data_obs"
-        _modelWSFile = "./%s/background_merged/CMS-HGG_mva_13TeV_multipdf.root"%opt.modelWSDir  
+        _modelWSFile = "./%s/background_merged/CMS-HGG_mva_13TeV_multipdf.root"%opt.modelWSDir
         _inputWSFile = '-' #not needed for data/bkg
         _nominalDataName = '-' #not needed for data/bkg
 
@@ -364,7 +371,7 @@ if not skipData:
             print " --> [VERBOSE] Adding to dataFrame: (proc,cat) = (%s,%s)"%(_proc_bkg,_cat)
             print " --> [VERBOSE] Adding to dataFrame: (proc,cat) = (%s,%s)"%(_proc_data,_cat)
             data.loc[len(data)] = [year,'bkg',_proc_bkg,'-',_cat,_inputWSFile,_nominalDataName,_modelWSFile,_model_bkg,1.,0]
-            data.loc[len(data)] = [year,'data',_proc_data,'-',_cat,_inputWSFile,_nominalDataName,_modelWSFile,_model_data,-1,0] 
+            data.loc[len(data)] = [year,'data',_proc_data,'-',_cat,_inputWSFile,_nominalDataName,_modelWSFile,_model_data,-1,0]
     # Fully separate: i.e. processed separately in FinalFits
     else:
       for cat in opt.cats.split(","):
@@ -377,8 +384,8 @@ if not skipData:
           _catStripYear = cat
           if(opt.analysis=="HHWWgg"): _modelWSFile = "./%s/%s/CMS-HGG_mva_13TeV_multipdf.root"%(opt.modelWSDir,opt.ext)
           else: _modelWSFile = "./%s/background_%s/CMS-HGG_mva_13TeV_multipdf.root"%(opt.modelWSDir,year)
-          
-         
+
+
           _inputWSFile = '-' #not needed for data/bk
           _nominalDataName = '-' #not needed for data/bkg
           _model_bkg = "multipdf:CMS_hgg_%s_13TeV_bkgshape"%_cat
@@ -405,15 +412,15 @@ if not skipData:
   theoryFactoryType = {}
   if opt.doSystematics:
     # Extract first row of signal dataframe and use factoryType function to extract type of systematic
-    for s in experimental_systematics: 
-      if s['type'] == 'factory': 
+    for s in experimental_systematics:
+      if s['type'] == 'factory':
         experimentalFactoryType[s['name']] = factoryType(data,s)
         if experimentalFactoryType[s['name']] in ["a_w","a_h"]:
           data['%s_up_yield'%s['name']] = '-'
           data['%s_down_yield'%s['name']] = '-'
         else: data['%s_yield'%s['name']] = '-'
-    for s in theory_systematics: 
-      if s['type'] == 'factory': 
+    for s in theory_systematics:
+      if s['type'] == 'factory':
         theoryFactoryType[s['name']] = factoryType(data,s)
         if theoryFactoryType[s['name']] in ["a_w","a_h"]:
           data['%s_up_yield'%s['name']] = '-'
@@ -426,7 +433,7 @@ if not skipData:
 
     print " --> [VERBOSE] Extracting yields: (%s,%s) [%.1f%%]"%(r['proc'],r['cat'],100*(float(ir)/totalSignalRows))
 
-    # print'ir: ',ir 
+    # print'ir: ',ir
     # print'r: ',r
 
     # Open input WS file and extract workspace
@@ -435,23 +442,23 @@ if not skipData:
     # Extract nominal RooDataSet and yield
     rdata_nominal = inputWS.data(r.nominalDataName)
     data.at[ir,'nominal_yield'] = rdata_nominal.sumEntries()
-    
+
     # Systematics: loop over systematics and use function to extract yield variations
     if opt.doSystematics:
       # For experimental systematics: skip NOTAG (as incorrect weights)
       if "NOTAG" not in r['cat']:
         experimentalSystYields = calcSystYields(r['nominalDataName'],inputWS,experimentalFactoryType)
         for s,f in experimentalFactoryType.iteritems():
-          if f in ['a_w','a_h']: 
-            for direction in ['up','down']: 
+          if f in ['a_w','a_h']:
+            for direction in ['up','down']:
               data.at[ir,"%s_%s_yield"%(s,direction)] = experimentalSystYields["%s_%s"%(s,direction)]
           else:
             data.at[ir,"%s_yield"%s] = experimentalSystYields[s]
       # For theoretical systematics:
       theorySystYields = calcSystYields(r['nominalDataName'],inputWS,theoryFactoryType)
       for s,f in theoryFactoryType.iteritems():
-        if f in ['a_w','a_h']: 
-          for direction in ['up','down']: 
+        if f in ['a_w','a_h']:
+          for direction in ['up','down']:
             data.at[ir,"%s_%s_yield"%(s,direction)] = theorySystYields["%s_%s"%(s,direction)]
         else:
           data.at[ir,"%s_yield"%s] = theorySystYields[s]
@@ -481,10 +488,10 @@ if not skipData:
     for s in theory_systematics:
       if s['type'] == 'constant': data = addConstantSyst(data,s,opt)
     # Theory factory: group scale weights after calculation in relevant grouping scheme
-    if opt.doSTXSBinMerging: 
+    if opt.doSTXSBinMerging:
       data = theorySystFactory(data, theory_systematics, theoryFactoryType, opt, stxsMergeScheme=stxsBinMergingScheme )
       data, theory_systematics = groupSystematics(data, theory_systematics, opt, prefix="scaleWeight", groupings=[[1,2],[3,6],[4,8]], stxsMergeScheme=stxsBinMergingScheme)
-    else: 
+    else:
       if(opt.analysis!="HHWWgg"):
         data = theorySystFactory(data, theory_systematics, theoryFactoryType, opt)
         data, theory_systematics = groupSystematics(data, theory_systematics, opt, prefix="scaleWeight", groupings=[[1,2],[3,6],[4,8]])
@@ -511,7 +518,7 @@ fdataName = opt.DatacardName
 print " --> [VERBOSE] Writing to datacard file: %s"%fdataName
 from writeToDatacard import writePreamble, writeProcesses, writeSystematic, writePdfIndex, writeBreak
 fdata = open(fdataName,"w")
-if not writePreamble(fdata,opt): 
+if not writePreamble(fdata,opt):
   print " --> [ERROR] in writing preamble. Leaving..."
   leave()
 if not writeProcesses(fdata,data,opt):

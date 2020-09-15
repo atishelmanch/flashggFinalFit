@@ -37,8 +37,9 @@ usage(){
 		echo "calcPhotonSystConsts --> scale and smear ets of photons systematic variations"
 		echo "SignalFit --> actually determine the number of gaussians to fit"
 		echo "options:"
-		echo "-h|--help) "
+               echo "-h|--help) "
 		echo "-i|--inputFile) "
+		echo "-w|--website) "
 		echo "-p|--procs) "
 		echo "-f|--flashggCats) (default UntaggedTag_0,UntaggedTag_1,UntaggedTag_2,UntaggedTag_3,UntaggedTag_4,VBFTag_0,VBFTag_1,VBFTag_2,TTHHadronicTag,TTHLeptonicTag,VHHadronicTag,VHTightTag,VHLooseTag,VHEtTag)"
 		echo "--analysis) Specifies the replacement dataset to use"
@@ -65,7 +66,7 @@ usage(){
 
 
 # options may be followed by one colon to indicate they have a required argument
-if ! options=$(getopt -u -o hi:p:f: -l help,inputFile:,procs:,bs:,smears:,massList:,scales:,scalesCorr:,useSSF:,useDCB_1G:,scalesGlobal:,flashggCats:,analysis:,analysis_type:,FinalState:,ext:,fTestOnly,calcPhoSystOnly,sigFitOnly,dontPackage,packageOnly,sigPlotsOnly,intLumi:,year:,batch:,queue:,verbosity:,systematics:, -- "$@")
+if ! options=$(getopt -u -o hi:w:p:f: -l help,inputFile:,website:,procs:,bs:,smears:,massList:,scales:,scalesCorr:,useSSF:,useDCB_1G:,scalesGlobal:,flashggCats:,analysis:,analysis_type:,FinalState:,ext:,fTestOnly,calcPhoSystOnly,sigFitOnly,dontPackage,packageOnly,sigPlotsOnly,intLumi:,year:,batch:,queue:,verbosity:,systematics:, -- "$@")
 then
 # something went wrong, getopt will put out an error message for us
 exit 1
@@ -77,6 +78,7 @@ do
 case $1 in
 -h|--help) usage; exit 0;;
 -i|--inputFile) FILE=$2; shift ;;
+-w|--website) WEBSITE=$2; shift ;;
 -p|--procs) PROCS=$2; shift ;;
 --massList) MASSLIST=$2; shift ;;
 --smears) SMEARS=$2; shift ;;
@@ -102,7 +104,7 @@ case $1 in
 --batch) BATCH=$2; shift;;
 --queue) QUEUE=$2; shift;;
 --verbosity) VERBOSITY=$2; shift;;
---systematics) SYSTEMATICS=$2; shift;; 
+--systematics) SYSTEMATICS=$2; shift;;
 
 (--) shift; break;;
 (-*) usage; echo "$0: [ERROR] - unrecognized option $1" 1>&2; usage >> /dev/stderr; exit 1;;
@@ -118,7 +120,7 @@ done
 echo "[INFO] processing signal model for INTLUMI $INTLUMI"
 
 OUTDIR="outdir_$EXT"
-echo "[INFO] outdir is $OUTDIR" 
+echo "[INFO] outdir is $OUTDIR"
 if [[ $FILE == "" ]];then
 echo "[ERROR], input file (--inputFile or -i) is mandatory!"
 exit 0
@@ -178,15 +180,15 @@ else
     echo "Running Signal F-Test"
     echo "-->Determine Number of gaussians"
     echo "=============================="
-    
-    # If it's HHWWgg need to run signalFTest for each file 
+
+    # If it's HHWWgg need to run signalFTest for each file
 
     if [ -z $BATCH ]; then
-      echo "./bin/signalFTest -i $FILE -d dat/newConfig_$EXT.dat -p $PROCS -f $CATS -o $OUTDIR --analysis $ANALYSIS --verbose $VERBOSITY --analysis_type $ANALYSIS_TYPE --FinalState $FINALSTATE"
-      ./bin/signalFTest -i $FILE -d dat/newConfig_$EXT.dat -p $PROCS -f $CATS -o $OUTDIR --analysis $ANALYSIS --verbose $VERBOSITY --analysis_type $ANALYSIS_TYPE --FinalState $FINALSTATE
+      echo "./bin/signalFTest -i $FILE -w $WEBSITE -d dat/newConfig_$EXT.dat -p $PROCS -f $CATS -o $OUTDIR --analysis $ANALYSIS --verbose $VERBOSITY --analysis_type $ANALYSIS_TYPE --FinalState $FINALSTATE"
+      ./bin/signalFTest -i $FILE -w $WEBSITE -d dat/newConfig_$EXT.dat -p $PROCS -f $CATS -o $OUTDIR --analysis $ANALYSIS --verbose $VERBOSITY --analysis_type $ANALYSIS_TYPE --FinalState $FINALSTATE
     else
-      echo "./python/submitSignalFTest.py --procs $PROCS --flashggCats $CATS --outDir $OUTDIR --i $FILE --batch $BATCH -q $QUEUE --analysis $ANALYSIS --verbose $VERBOSITY"
-      ./python/submitSignalFTest.py --procs $PROCS --flashggCats $CATS --outDir $OUTDIR --i $FILE --batch $BATCH -q $QUEUE --analysis $ANALYSIS --verbose $VERBOSITY
+      echo "./python/submitSignalFTest.py --procs $PROCS --flashggCats $CATS --outDir $OUTDIR --i $FILE -w $WEBSITE --batch $BATCH -q $QUEUE --analysis $ANALYSIS --verbose $VERBOSITY"
+      ./python/submitSignalFTest.py --procs $PROCS --flashggCats $CATS --outDir $OUTDIR --i $FILE  -w $WEBSITE --batch $BATCH -q $QUEUE --analysis $ANALYSIS --verbose $VERBOSITY
       PEND=`ls -l $OUTDIR/fTestJobs/sub*| grep -v "\.run" | grep -v "\.done" | grep -v "\.fail" | grep -v "\.err" |grep -v "\.log" | grep -v "\.out" | grep -v "\.sub" | wc -l`
       echo "PEND $PEND"
       while (( $PEND > 0 )) ; do
@@ -197,7 +199,7 @@ else
         (( PEND=$PEND-$RUN-$FAIL-$DONE ))
         echo " PEND $PEND - RUN $RUN - DONE $DONE - FAIL $FAIL"
         if (( $RUN > 0 )) ; then PEND=1 ; fi
-        if (( $FAIL > 0 )) ; then 
+        if (( $FAIL > 0 )) ; then
           echo "[ERROR] at least one job failed :"
           ls -l $OUTDIR/fTestJobs/sub* | grep "\.fail"
           exit 1
@@ -207,7 +209,7 @@ else
     fi
     mkdir -p $OUTDIR/dat
     cat $OUTDIR/fTestJobs/outputs/* > dat/newConfig_${EXT}_temp.dat
-    sort -u dat/newConfig_${EXT}_temp.dat  > dat/tmp_newConfig_${EXT}_temp.dat 
+    sort -u dat/newConfig_${EXT}_temp.dat  > dat/tmp_newConfig_${EXT}_temp.dat
     mv dat/tmp_newConfig_${EXT}_temp.dat dat/newConfig_${EXT}_temp.dat
     cp dat/newConfig_${EXT}_temp.dat $OUTDIR/dat/copy_newConfig_${EXT}_temp.dat
     rm -rf $OUTDIR/sigfTest
@@ -250,48 +252,48 @@ if [ $SIGFITONLY == 1 ]; then
   echo "-->Create actual signal model"
   echo "=============================="
 
-  # if HHWWgg analysis, need to artificially create 120, 130 GeV mass points by shifting 125 dataset 
-  if [[ $ANALYSIS == "HHWWgg" ]]; then 
+  # if HHWWgg analysis, need to artificially create 120, 130 GeV mass points by shifting 125 dataset
+  if [[ $ANALYSIS == "HHWWgg" ]]; then
 
-    fileDir="${FILE%/*}" # get directory 
+    fileDir="${FILE%/*}" # get directory
     fileEnd="${FILE##*/}"
-    fileID=${fileEnd::-5} # remove .root   
+    fileID=${fileEnd::-5} # remove .root
 
-    ## Get HHWWgg label from file name 
-    if [[ $ANALYSIS_TYPE == "Res" ]]; then 
-      # For res analysis, ID = SM, X250, ... 
-      ID="$(cut -d'_' -f1 <<<$fileID)" # get text before first '_'. ex: SM, X250, X260, ... 
+    ## Get HHWWgg label from file name
+    if [[ $ANALYSIS_TYPE == "Res" ]]; then
+      # For res analysis, ID = SM, X250, ...
+      ID="$(cut -d'_' -f1 <<<$fileID)" # get text before first '_'. ex: SM, X250, X260, ...
       # echo "fileDir: $fileDir"
       # echo "mass: $mass"
-      HHWWggLabel="${ID}_WWgg_${FINALSTATE}gg"
+      HHWWggLabel="${ID}_HHWWgg_${FINALSTATE}"
       proc="ggF"
     elif [[ $ANALYSIS_TYPE == "EFT" ]];
-    then 
-      ## --EFT: 
+    then
+      ## --EFT:
       # File name format: nodeX_HHWWgg_<FinalState>
       # RooAbsData name format: GluGluToHHTo_WWgg_<FinalState>_nodeX_13TeV_HHWWggTag_Y
-      # proc = GluGluToHHTo, 13TeV_HHWWggTag_Y already included 
+      # proc = GluGluToHHTo, 13TeV_HHWWggTag_Y already included
       # HHWWgg_Label = WWgg_<FinalState>_nodeX
 
-      # For EFT analysis, ID = node2, node9, ... 
+      # For EFT analysis, ID = node2, node9, ...
       ID="$(cut -d'_' -f1 <<<$fileID)"
       HHWWggLabel="WWgg_${FINALSTATE}_${ID}"
       proc="GluGluToHHTo"
 
     elif [[ $ANALYSIS_TYPE == "NMSSM" ]];
-    then 
+    then
       # // file name format: MX<massX>_MY<massY>_HHWWgg_<FinalState>.root
       # // RooAbsData name format: NMSSM_XYHWWgg<FinalState>_MX<massX>_MY<massY>_13TeV_HHWWggTag_Y
       # vector<string> tmpV;
-      # split(tmpV,filename_[0],boost::is_any_of("/"));	
-      # unsigned int N = tmpV.size();  
+      # split(tmpV,filename_[0],boost::is_any_of("/"));
+      # unsigned int N = tmpV.size();
       # string endPath = tmpV[N-1];
       # vector<string> tmpV2;
-      # split(tmpV2,endPath,boost::is_any_of("_"));	 
-      # string XmassString = tmpV2[0]; 
-      # string YmassString = tmpV2[1]; 
+      # split(tmpV2,endPath,boost::is_any_of("_"));
+      # string XmassString = tmpV2[0];
+      # string YmassString = tmpV2[1];
       # HHWWgg_Label = Form("XYHWWgg<FinalState>_%s_%s",XmassString.c_str(),YmassString.c_str());
-      # cout << "Going to look for: " << HHWWgg_Label.c_str() << endl;    
+      # cout << "Going to look for: " << HHWWgg_Label.c_str() << endl;
       echo "Doing NMSSM analysis"
       mX="$(cut -d'_' -f1 <<<$fileID)"
       mY="$(cut -d'_' -f2 <<<$fileID)"
@@ -300,30 +302,30 @@ if [ $SIGFITONLY == 1 ]; then
       proc="ggF"
       # echo "
       # ID="$(cut -d'_' -f1 <<<$fileID)"
-    fi 
+    fi
 
-    # python DirecShiftHiggsDatasets.py $fileDir $mass $HHWWggLabel # create 120 and 130 points 
+    # python DirecShiftHiggsDatasets.py $fileDir $mass $HHWWggLabel # create 120 and 130 points
     echo "COMMAND: python DirecShiftHiggsDatasets.py $fileDir $ID $HHWWggLabel $CATS $ANALYSIS_TYPE $proc $FINALSTATE"
-    python DirecShiftHiggsDatasets.py $fileDir $ID $HHWWggLabel $CATS $ANALYSIS_TYPE $proc $FINALSTATE # create 120 and 130 points 
+    python DirecShiftHiggsDatasets.py $fileDir $ID $HHWWggLabel $CATS $ANALYSIS_TYPE $proc $FINALSTATE # create 120 and 130 points
     sigFiles=""
     for m in 120 125 130
     do
       sigFiles+="${fileDir}_interpolation/X_signal_${ID}_${m}_HHWWgg_${FINALSTATE}.root,"
 
-      # if [[ $ANALYSIS_TYPE == "Res" ]]; then 
+      # if [[ $ANALYSIS_TYPE == "Res" ]]; then
       #   sigFiles+="${fileDir}_interpolation/X_signal_${ID}_${m}_HHWWgg_<FinalState>.root,"
       # elif [[ $ANALYSIS_TYPE == "EFT" ]];
-      # then 
+      # then
       #   sigFiles+="${fileDir}_interpolation/X_signal_${ID}_${m}_HHWWgg_<FinalState>.root,"
       # elif [[ $ANALYSIS_TYPE == "NMSSM" ]];
-      # then 
-      #   sigFiles+="${fileDir}_interpolation/X_signal_${ID}_${m}_HHWWgg_<FinalState>.root,"        
-      # fi         
-        
-    done    
+      # then
+      #   sigFiles+="${fileDir}_interpolation/X_signal_${ID}_${m}_HHWWgg_<FinalState>.root,"
+      # fi
+
+    done
     sigFiles=${sigFiles: : -1} # remove extra ","
     FILE=$sigFiles
-  fi 
+  fi
 
   if [[ $BATCH == "" ]]; then
     echo "ANALYSIS: $ANALYSIS"
@@ -332,17 +334,17 @@ if [ $SIGFITONLY == 1 ]; then
     if [ $SYSTEMATICS == 0 ]; then
       sysdatOption="-s dat/empty.dat"
     fi
-    echo "./bin/SignalFit -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 ${sysdatOption} --procs $PROCS -o $OUTDIR/CMS-HGG_mva_13TeV_sigfit.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI  --useDCBplusGaus $USEDCBP1G --useSSF $SIMULATENOUSMASSPOINTFITTING --massList $MASSLIST --analysis $ANALYSIS --year $YEAR --analysis_type $ANALYSIS_TYPE --FinalState $FINALSTATE"
-    ./bin/SignalFit -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 ${sysdatOption} --procs $PROCS -o $OUTDIR/CMS-HGG_mva_13TeV_sigfit.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI  --useDCBplusGaus $USEDCBP1G --useSSF $SIMULATENOUSMASSPOINTFITTING --massList $MASSLIST --analysis $ANALYSIS --year $YEAR --analysis_type $ANALYSIS_TYPE --FinalState $FINALSTATE
+    echo "./bin/SignalFit -i $FILE -w ${WEBSITE} -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 ${sysdatOption} --procs $PROCS -o $OUTDIR/CMS-HGG_mva_13TeV_sigfit.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI  --useDCBplusGaus $USEDCBP1G --useSSF $SIMULATENOUSMASSPOINTFITTING --massList $MASSLIST --analysis $ANALYSIS --year $YEAR --analysis_type $ANALYSIS_TYPE --FinalState $FINALSTATE" --verbose $VERBOSITY
+    ./bin/SignalFit -i $FILE -w ${WEBSITE} -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 ${sysdatOption} --procs $PROCS -o $OUTDIR/CMS-HGG_mva_13TeV_sigfit.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI  --useDCBplusGaus $USEDCBP1G --useSSF $SIMULATENOUSMASSPOINTFITTING --massList $MASSLIST --analysis $ANALYSIS --year $YEAR --analysis_type $ANALYSIS_TYPE --FinalState $FINALSTATE --verbose $VERBOSITY
   else
     echo "./python/submitSignalFit.py -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_sigfit_$EXT.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI --batch $BATCH --massList $MASSLIST -q $QUEUE $BSOPT --useSSF $SIMULATENOUSMASSPOINTFITTING --useDCB_1G $USEDCBP1G --analysis $ANALYSIS --year $YEAR"
-    ./python/submitSignalFit.py -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_sigfit_$EXT.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI --batch $BATCH --massList $MASSLIST -q $QUEUE $BSOPT --useSSF $SIMULATENOUSMASSPOINTFITTING --useDCB_1G $USEDCBP1G --analysis $ANALYSIS --year $YEAR 
+    ./python/submitSignalFit.py -i $FILE -d dat/newConfig_$EXT.dat  --mhLow=120 --mhHigh=130 -s dat/photonCatSyst_$EXT.dat --procs $PROCS -o $OUTDIR/CMS-HGG_sigfit_$EXT.root -p $OUTDIR/sigfit -f $CATS --changeIntLumi $INTLUMI --batch $BATCH --massList $MASSLIST -q $QUEUE $BSOPT --useSSF $SIMULATENOUSMASSPOINTFITTING --useDCB_1G $USEDCBP1G --analysis $ANALYSIS --year $YEAR
 
     PEND=`ls -l $OUTDIR/sigfit/SignalFitJobs/sub*| grep -v "\.run" | grep -v "\.done" | grep -v "\.fail" | grep -v "\.err" |grep -v "\.log" | grep -v "\.out" | grep -v "\.sub" | wc -l`
     echo "PEND $PEND"
 
-    # Don't want this for HHWWgg because need to submit job for each mass point 
-    if [[ $ANALYSIS != "HHWWgg" ]]; then 
+    # Don't want this for HHWWgg because need to submit job for each mass point
+    if [[ $ANALYSIS != "HHWWgg" ]]; then
       while (( $PEND > 0 )) ; do
         PEND=`ls -l $OUTDIR/sigfit/SignalFitJobs/sub* | grep -v "\.run" | grep -v "\.done" | grep -v "\.fail" | grep -v "\.err" | grep -v "\.log" | grep -v "\.out" | grep -v "\.sub" | wc -l`
         RUN=`ls -l $OUTDIR/sigfit/SignalFitJobs/sub* | grep "\.run" | wc -l`
@@ -351,14 +353,14 @@ if [ $SIGFITONLY == 1 ]; then
         (( PEND=$PEND-$RUN-$FAIL-$DONE ))
         echo " PEND $PEND - RUN $RUN - DONE $DONE - FAIL $FAIL"
         if (( $RUN > 0 )) ; then PEND=1 ; fi
-        if (( $FAIL > 0 )) ; then 
+        if (( $FAIL > 0 )) ; then
           echo "[ERROR] at least one job failed :"
           ls -l $OUTDIR/sigfit/SignalFitJobs/sub* | grep "\.fail"
           exit 1
         fi
         sleep 10
       done
-    fi 
+    fi
 
     #ls $PWD/$OUTDIR/CMS-HGG_sigfit_${EXT}_*.root > out.txt
     # CMS-HGG_mva_13TeV_sigfit.root
@@ -389,13 +391,13 @@ fi
 if [ $PACKAGEONLY == 1 ]; then
 
   echo "ANALYSIS: $ANALYSIS"
-  if [[ $ANALYSIS == "HHWWgg" ]]; then 
+  if [[ $ANALYSIS == "HHWWgg" ]]; then
     ls $OUTDIR/CMS-HGG_mva_13TeV_sigfit.root > out.txt
     echo "ls ../Signal/$OUTDIR/CMS-HGG_mva_13TeV_sigfit.root > out.txt"
-  else 
+  else
     ls $OUTDIR/CMS-HGG_sigfit_${EXT}_*.root > out.txt
     echo "ls ../Signal/$OUTDIR/CMS-HGG_sigfit_${EXT}_*.root > out.txt"
-  fi 
+  fi
 
   # ls $OUTDIR/CMS-HGG_sigfit_${EXT}_*.root > out.txt
   # echo "ls ../Signal/$OUTDIR/CMS-HGG_sigfit_${EXT}_*.root > out.txt"
@@ -430,7 +432,7 @@ if [ $PACKAGEONLY == 1 ]; then
       (( PEND=$PEND-$RUN-$FAIL-$DONE ))
       echo " PEND $PEND - RUN $RUN - DONE $DONE - FAIL $FAIL"
       if (( $RUN > 0 )) ; then PEND=1 ; fi
-      if (( $FAIL > 0 )) ; then 
+      if (( $FAIL > 0 )) ; then
         echo "[ERROR] at least one job failed :"
         ls -l $OUTDIR/sigfit/PackagerJobs/sub* | grep "\.fail"
         exit 1
@@ -449,25 +451,25 @@ if [ $SIGPLOTSONLY == 1 ]; then
   echo "Make Signal Plots"
   echo "-->Create Validation plots"
   echo "=============================="
-  
+
   if [ -z $BATCH ]; then
 
-    inFile="${OUTDIR}/CMS-HGG_sigfit_${EXT}.root" #packaged 
-    # if [[ $ANALYSIS == "HHWWgg" ]]; then 
-    #   inFile="${OUTDIR}/CMS-HGG_mva_13TeV_sigfit.root" # non-packaged 
+    inFile="${OUTDIR}/CMS-HGG_sigfit_${EXT}.root" #packaged
+    # if [[ $ANALYSIS == "HHWWgg" ]]; then
+    #   inFile="${OUTDIR}/CMS-HGG_mva_13TeV_sigfit.root" # non-packaged
     # fi
     # sysOption="1"
     # if [ $SYSTEMATICS == 0 ]; then
     #   sysOption="-s dat/empty.dat"
     # fi
-    echo " ./bin/makeParametricSignalModelPlots -i ${inFile}  -o $OUTDIR -p $PROCS -f $CATS --analysis $ANALYSIS --year $YEAR --systematics $SYSTEMATICS --analysis_type $ANALYSIS_TYPE --FinalState $FINALSTATE"
-    ./bin/makeParametricSignalModelPlots -i ${inFile}  -o $OUTDIR/sigplots -p $PROCS -f $CATS --analysis $ANALYSIS --year $YEAR --systematics $SYSTEMATICS --analysis_type $ANALYSIS_TYPE --FinalState $FINALSTATE # Need to not output to .txt file in order to debug 
+    echo " ./bin/makeParametricSignalModelPlots -i ${inFile} -w ${WEBSITE} -o $OUTDIR -p $PROCS -f $CATS --analysis $ANALYSIS --year $YEAR --systematics $SYSTEMATICS --analysis_type $ANALYSIS_TYPE --FinalState $FINALSTATE"
+    ./bin/makeParametricSignalModelPlots -i ${inFile} -w ${WEBSITE} -o $OUTDIR/sigplots -p $PROCS -f $CATS --analysis $ANALYSIS --year $YEAR --systematics $SYSTEMATICS --analysis_type $ANALYSIS_TYPE --FinalState $FINALSTATE # Need to not output to .txt file in order to debug
     # ./bin/makeParametricSignalModelPlots -i ${inFile}  -o $OUTDIR/sigplots -p $PROCS -f $CATS --analysis $ANALYSIS --year $YEAR --systematics $SYSTEMATICS > signumbers_${EXT}.txt
-    
-    if [[ $ANALYSIS != "HHWWgg" ]]; then 
-      # should add HHWWgg feature here :) 
+
+    if [[ $ANALYSIS != "HHWWgg" ]]; then
+      # should add HHWWgg feature here :)
       ./makeSlides.sh $OUTDIR
-      mv fullslides.pdf $OUTDIR/fullslides_${EXT}.pdf    
+      mv fullslides.pdf $OUTDIR/fullslides_${EXT}.pdf
     fi
 
   else
@@ -484,7 +486,7 @@ if [ $SIGPLOTSONLY == 1 ]; then
       (( PEND=$PEND-$RUN-$FAIL-$DONE ))
       echo " PEND $PEND - RUN $RUN - DONE $DONE - FAIL $FAIL"
       if (( $RUN > 0 )) ; then PEND=1 ; fi
-      if (( $FAIL > 0 )) ; then 
+      if (( $FAIL > 0 )) ; then
         echo "[ERROR] at least one job failed :"
         ls -l $OUTDIR/sigplots/PlottingJobs/sub* | grep "\.fail"
         exit 1

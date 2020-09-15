@@ -4,7 +4,7 @@
 # WRONG VERTEX FITS:
 #  > shape of mgg in WV ~identical across tags, therefore use single replacement
 
-# Replacement proc for WV fit: 
+# Replacement proc for WV fit:
 replacementProcWV = {
   "hig-16-040":"GG2H",
   "stage1":"GG2H_0J",
@@ -13,7 +13,7 @@ replacementProcWV = {
   # "HHWWgg":"ggF",
   "HHWWgg":"GluGluToHHTo"
 }
-# Replacement cat for WV fit: 
+# Replacement cat for WV fit:
 replacementCatWV = {
   "hig-16-040":"UntaggedTag_2",
   "stage1":"RECO_0J_Tag1",
@@ -247,7 +247,7 @@ replacementCatRVMap = {
   ],
 
   # STXS stage 1.1 categorisation
-  "stage1_1":[ 
+  "stage1_1":[
     "RECO_0J_PTH_GT10_Tag0:RECO_0J_PTH_GT10_Tag0",
     "RECO_0J_PTH_GT10_Tag1:RECO_0J_PTH_GT10_Tag1",
     "RECO_0J_PTH_0_10_Tag0:RECO_0J_PTH_0_10_Tag0",
@@ -265,7 +265,7 @@ replacementCatRVMap = {
     "RECO_GE2J_PTH_60_120_Tag0:RECO_GE2J_PTH_60_120_Tag0",
     "RECO_GE2J_PTH_60_120_Tag1:RECO_GE2J_PTH_60_120_Tag1",
     "RECO_GE2J_PTH_0_60_Tag0:RECO_GE2J_PTH_0_60_Tag0",
-    "RECO_GE2J_PTH_0_60_Tag1:RECO_GE2J_PTH_0_60_Tag1",   
+    "RECO_GE2J_PTH_0_60_Tag1:RECO_GE2J_PTH_0_60_Tag1",
     "RECO_VBFTOPO_BSM:RECO_VBFTOPO_BSM",
     "RECO_VBFTOPO_JET3VETO_Tag0:RECO_VBFTOPO_JET3VETO_Tag0",
     "RECO_VBFTOPO_JET3VETO_Tag1:RECO_VBFTOPO_JET3VETO_Tag1",

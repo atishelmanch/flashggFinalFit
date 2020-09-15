@@ -129,12 +129,12 @@ void OptionParser(int argc, char *argv[]){
 	}
   allMH_ = getAllMH();
 }
- 
+
 int main (int argc, char *argv[]){
- 
+
   gROOT->SetBatch();
   OptionParser(argc,argv);
-  
+
   TFile *outFile = new TFile(outfilename_.c_str(),"RECREATE");
 
   RooRealVar *intLumi = new RooRealVar("IntLumi","IntLumi",lumi_*1000,0.,10.e5);
@@ -148,7 +148,7 @@ int main (int argc, char *argv[]){
     RooWorkspace* vTmpWS = 0;
     int nFiles = inWS->nFiles();
     for (int i=0 ; i < nFiles; i++) {
-      //inWS->getWsList()[i]->Print();
+      // inWS->getWsList()[i]->Print();
       if (i==0) tmpWS = (RooWorkspace*) inWS->getSpecificWorkspace(i)->Clone();
       if (!tmpWS){ std::cout << "EXIT" << std::endl;  exit(1);}
       if (i !=0) {
@@ -162,7 +162,7 @@ int main (int argc, char *argv[]){
         std::list<RooAbsData*> data =  (inWS->getWsList()[i]->allData()) ;
         for (std::list<RooAbsData*>::const_iterator iterator = data.begin(), end = data.end(); iterator != end; ++iterator )  {
          tmpWS->import(**iterator);
-        } 
+        }
         std::list<TObject*> stuff =  (inWS->getWsList()[i]->allGenericObjects()) ;
         for (std::list<TObject*>::const_iterator iterator = stuff.begin(), end = stuff.end(); iterator != end; ++iterator )  {
          tmpWS->import(**iterator);
@@ -174,7 +174,7 @@ int main (int argc, char *argv[]){
         std::list<RooAbsData*> data = vTmpWS->allData();
         for (std::list<RooAbsData*>::const_iterator iterator = data.begin(), end = data.end(); iterator != end; ++iterator )  {
           tmpWS->import(**iterator);
-        } 
+        }
         std::list<TObject*> stuff = vTmpWS->allGenericObjects();
         for (std::list<TObject*>::const_iterator iterator = stuff.begin(), end = stuff.end(); iterator != end; ++iterator )  {
           tmpWS->import(**iterator);
@@ -183,7 +183,7 @@ int main (int argc, char *argv[]){
       }
 
     }
-    WSTFileWrapper *mergedWS = new WSTFileWrapper(tmpWS); 
+    WSTFileWrapper *mergedWS = new WSTFileWrapper(tmpWS);
 
     saveWS->SetName("wsig_13TeV");
     ncats_= flashggCats_.size();
@@ -201,5 +201,5 @@ int main (int argc, char *argv[]){
     cout << "[INFO] close output file  " << endl;
     outFile->Close();
   return 0;
-}  
- 
+}
+

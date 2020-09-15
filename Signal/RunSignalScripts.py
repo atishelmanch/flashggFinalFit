@@ -8,8 +8,8 @@ lumi = {'2016':'35.9', '2017':'41.5', '2018':'59.8'}
 def finishCommand(cmdLine_,useDCB_,mode_,printOnly_):
   if useDCB_: cmdLine_ += ' --useDCB_1G 1'
   else: cmdLine_ += ' --useDCB_1G 0'
-  if mode_ == "phoSystCalc": cmdLine_ += ' --calcPhoSystOnly' 
-  elif mode_ == "sigFitOnly": cmdLine_ += ' --sigFitOnly --dontPackage' 
+  if mode_ == "phoSystCalc": cmdLine_ += ' --calcPhoSystOnly'
+  elif mode_ == "sigFitOnly": cmdLine_ += ' --sigFitOnly --dontPackage'
   elif mode_ == "packageOnly": cmdLine_ += ' --packageOnly'
   elif mode_ == "sigPlotsOnly": cmdLine_ += ' --sigPlotsOnly'
 
@@ -25,6 +25,7 @@ def get_options():
 
   # Setup
   parser.add_option('--inputWSDir', dest='inputWSDir', default='/eos/home-j/jlangfor/hgg/ws/test_legacy_runII_102x', help="Directory storing flashgg workspaces" )
+  parser.add_option('--website', dest='website', default='/eos/user/r/rasharma/www/doubleHiggs/HHWWgg/11July', help="Directory storing flashgg workspaces" )
   parser.add_option('--cats', dest='cats', default='UntaggedTag_0,VBFTag_0', help="Define categories")
   parser.add_option('--usrprocs', dest='usrprocs', default='', help="Define production categories")
   parser.add_option('--ext', dest='ext', default='test', help="Extension: defines output dir where signal models are saved")
@@ -39,7 +40,7 @@ def get_options():
   parser.add_option('--useDCB', dest='useDCB', default=0, type='int', help="Use DCB in signal fit [yes=1,no=0(default)]")
 
   #Mass points
-  parser.add_option('--massPoints', dest='massPoints', default='120,125,130', help="Mass points to fit") 
+  parser.add_option('--massPoints', dest='massPoints', default='120,125,130', help="Mass points to fit")
 
   #Photon shape systematics
   parser.add_option('--scales', dest='scales', default='HighR9EB,HighR9EE,LowR9EB,LowR9EE,Gain1EB,Gain6EB', help="Photon shape systematics: scales")
@@ -51,12 +52,12 @@ def get_options():
   parser.add_option('--batch', dest='batch', default='HTCONDOR', help="Batch")
   parser.add_option('--queue', dest='queue', default='espresso', help="Queue")
 
-  # Miscellaneous options: only performing a single function 
+  # Miscellaneous options: only performing a single function
   parser.add_option('--mode', dest='mode', default='std', help="Allows single function [std,phoSystOnly,sigFitOnly,packageOnly,sigPlotsOnly]")
   parser.add_option('--printOnly', dest='printOnly', default=0, type='int', help="Dry run: print command only")
   parser.add_option('--verbosity', dest='verbosity', default=0, type='int', help="verbosity")
   parser.add_option('--systematics', dest='systematics', default=1, type='int', help="0: use empty dat file for photon systematics 1: use properly written and filled dat file")
-  
+
   # parser.add_option('--runLocal', dest='runLocal', default=0, type='int', help="Run locally, no batch systems")
   # parser.add_option('--HHWWgg', dest='HHWWgg', default=0, type='int', help="(0): Do not run for HHWWgg analysis (1): Run for HHWWgg analysis ")
   return parser.parse_args()
@@ -77,6 +78,7 @@ if opt.inputConfig != '':
 
     #Extract options
     inputWSDir   = _cfg['inputWSDir']
+    website      = _cfg['website']
     cats         = _cfg['cats']
     usrprocs     = _cfg['usrprocs']
     ext          = _cfg['ext']
@@ -98,10 +100,10 @@ if opt.inputConfig != '':
     systematics  = _cfg['systematics']
     printOnly    = opt.printOnly # Still take printOnly from options
     verbosity      = _cfg['verbosity']
-  
+
     #Delete copy of file
     os.system("rm config.py")
-  
+
   else:
     print "[ERROR] %s config file does not exist. Leaving..."%opt.inputConfig
     print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUNNING SIGNAL SCRIPTS (END) ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -110,6 +112,7 @@ if opt.inputConfig != '':
 #Else extract from option parser
 else:
   inputWSDir   = opt.inputWSDir
+  website      = opt.website
   cats         = opt.cats
   usrprocs     = opt.usrprocs
   ext          = opt.ext
@@ -128,15 +131,32 @@ else:
   batch        = opt.batch
   queue        = opt.queue
   mode         = opt.mode
-  systematics  = opt.systematics 
+  systematics  = opt.systematics
   printOnly    = opt.printOnly
   verbosity      = opt.verbosity
+
+
+print " ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+print "Create some direcoty to keep important plots at one place."
+print "==> List the created main directory."
+os.system("mkdir -p dat")
+os.system("mkdir -p "+website+os.sep+"Signal")
+os.system("mkdir -p "+website+os.sep+"grid")
+os.system("mkdir -p "+website+os.sep+"limits2")
+os.system("mkdir -p "+website+os.sep+"EfficiencyAcceptance")
+os.system("cp index.php "+website+os.sep)
+os.system("cp index.php "+website+os.sep+"Signal/")
+os.system("cp index.php "+website+os.sep+"grid/")
+os.system("cp index.php "+website+os.sep+"limits2/")
+os.system("cp index.php "+website+os.sep+"EfficiencyAcceptance/")
+os.system("ls "+website)
+print " ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
 # Check if mode in allowed options
 if mode not in ['std','calcPhotonSyst','writePhotonSyst','sigFitOnly','packageOnly','sigPlotsOnly']:
   print " --> [ERROR] mode %s not allowed. Please use one of the following: [std,phoSystOnly,sigFitOnly,packageOnly,sigPlotsOnly]. Leaving..."%mode
   print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUNNING SIGNAL SCRIPTS (END) ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-  sys.exit(1)  
+  sys.exit(1)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # FIXME: configure also for CONDOR
@@ -155,7 +175,7 @@ if mode == "calcPhotonSyst" and batch != "":
       cat = cats.split(",")[cat_idx]
       f = open("./outdir_%s/calcPhotonSyst/jobs/sub%g.sh"%(ext,cat_idx),"w")
       f.write("#!/bin/bash\n\n")
-      f.write("cd %s/src/flashggFinalFit/Signal\n\n"%os.environ['CMSSW_BASE']) 
+      f.write("cd %s/src/flashggFinalFit/Signal\n\n"%os.environ['CMSSW_BASE'])
       f.write("eval `scramv1 runtime -sh`\n\n")
       f.write("python python/calcPhotonSyst.py --cat %s --ext %s --inputWSDir %s --scales %s --scalesCorr %s --scalesGlobal %s --smears %s"%(cat,ext,inputWSDir,scales,scalesCorr,scalesGlobal,smears))
       f.close()
@@ -169,23 +189,25 @@ if mode == "calcPhotonSyst" and batch != "":
 
 elif mode == "writePhotonSyst":
   print " --> Write photon systematics to .dat file compatible with SignalFit.cpp: %s"%ext
-  os.system("eval `scramv1 runtime -sh`; python python/writePhotonSyst.py --cats %s --ext %s --scales %s --scalesCorr %s --scalesGlobal %s --smears %s"%(cats,ext,scales,scalesCorr,scalesGlobal,smears)) 
+  os.system("eval `scramv1 runtime -sh`; python python/writePhotonSyst.py --cats %s --ext %s --scales %s --scalesCorr %s --scalesGlobal %s --smears %s"%(cats,ext,scales,scalesCorr,scalesGlobal,smears))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 else:
   # Extract list of input ws filenames
   ws_fileNames = []
   for root, dirs, files in os.walk( inputWSDir ):
-    # print'files = ',files 
+    # print'files = ',files
     for fileName in files:
-      if not fileName.startswith('output_') and analysis != 'HHWWgg': continue 
+      if not fileName.startswith('output_') and analysis != 'HHWWgg': continue
       if not fileName.endswith('.root'): continue
       ws_fileNames.append( fileName )
-      # print'fileName: ',fileName 
+      # print'fileName: ',fileName
   # concatenate with input dir to get full list of complete file names
   ws_fullFileNames = ''
   for fileName in ws_fileNames: ws_fullFileNames+="%s/%s,"%(inputWSDir,fileName)
   ws_fullFileNames = ws_fullFileNames[:-1]
+
+  print "ws_fileNames: ",ws_fullFileNames
 
   # Extract list of procs
   procs = ''
@@ -195,17 +217,17 @@ else:
   if nUsrProcs > 0:
     for proc_idx in range(nUsrProcs):
       proc = usrprocs.split(",")[proc_idx]
-      # print'proc = ',proc 
-      procs += proc 
+      # print'proc = ',proc
+      procs += proc
     # if nUsrProcs > 1:
     # procs = procs[:-1]
 
-  # otherwise get from files 
+  # otherwise get from files
   else:
     for fileName in ws_fileNames:
       if 'M125' not in fileName and analysis != 'HHWWgg': continue
       procs += "%s,"%fileName.split('pythia8_')[1].split('.root')[0]
-    procs = procs[:-1]    
+    procs = procs[:-1]
 
   # Extract low and high MH values
   mps = []
@@ -214,6 +236,7 @@ else:
 
   # print info to user
   print " --> Input flashgg ws dir: %s"%inputWSDir
+  print " --> Website dir: %s"%website
   print " --> Processes: %s"%procs
   print " --> Categories: %s"%cats
   print " --> Mass points: %s --> Low = %s, High = %s"%(massPoints,mass_low,mass_high)
@@ -245,7 +268,7 @@ else:
   print " --> Constructing the input command..."
 
   cmdLine = ''
-  # origext = ext 
+  # origext = ext
 
   # if analysis is HHWWgg, need to run process for each mass point...this will need to be updated when we add a second category
   if analysis == 'HHWWgg':
@@ -253,35 +276,36 @@ else:
     filesList = ws_fullFileNames.split(',')
     for f in filesList:
       cmdLine = ''
-      print 
+      print
       print'On File: ',f
       print
       # ext = _HHWWgg_v2-3_2017_X280_WWgg_qqlnugg
 
       print'systematics: ',systematics
-      
+
       massExt = f.split('/')[-1].split('.')[0]
       thisExt = ext + '_' + massExt
 
-      intLumi = 1 # HHWWgg. Set luminosity in datacard 
+      intLumi = 1 # HHWWgg. Set luminosity in datacard
 
-      # if batch not specified, run locally 
-      if batch == '': cmdLine += './runSignalScripts.sh -i %s -p %s -f %s --ext %s --intLumi %s --year %s --massList %s --bs %s --analysis %s --scales %s --scalesCorr %s --scalesGlobal %s --smears %s --useSSF 1 --verbosity %s --systematics %s --analysis_type %s --FinalState %s'%(f,procs,cats,thisExt,intLumi,year,massPoints,beamspot,analysis,scales,scalesCorr,scalesGlobal,smears,verbosity,systematics,analysis_type,FinalState)
+      # if batch not specified, run locally
+      if batch == '': cmdLine += './runSignalScripts.sh -i %s -w %s -p %s -f %s --ext %s --intLumi %s --year %s --massList %s --bs %s --analysis %s --scales %s --scalesCorr %s --scalesGlobal %s --smears %s --useSSF 1 --verbosity %s --systematics %s --analysis_type %s --FinalState %s'%(f,website,procs,cats,thisExt,intLumi,year,massPoints,beamspot,analysis,scales,scalesCorr,scalesGlobal,smears,verbosity,systematics,analysis_type,FinalState)
 
-      # run with batch 
-      else: cmdLine += './runSignalScripts.sh -i %s -p %s -f %s --ext %s --intLumi %s --year %s --batch %s --queue %s --massList %s --bs %s --analysis %s --scales %s --scalesCorr %s --scalesGlobal %s --smears %s --useSSF 1 --verbosity %s'%(f,procs,cats,thisExt,lumi[year],year,batch,queue,massPoints,beamspot,analysis,scales,scalesCorr,scalesGlobal,smears,verbosity)
-    
+      # run with batch
+      else: cmdLine += './runSignalScripts.sh -i %s -w %s -p %s -f %s --ext %s --intLumi %s --year %s --batch %s --queue %s --massList %s --bs %s --analysis %s --scales %s --scalesCorr %s --scalesGlobal %s --smears %s --useSSF 1 --verbosity %s'%(f,website,procs,cats,thisExt,lumi[year],year,batch,queue,massPoints,beamspot,analysis,scales,scalesCorr,scalesGlobal,smears,verbosity)
+
+      print "cmdLine: ",cmdLine
       finishCommand(cmdLine,useDCB,mode,printOnly)
 
-  # non-HHWWgg analysis 
+  # non-HHWWgg analysis
   else:
     cmdLine = ''
-    # if batch not specified, run locally 
-    if batch == '': cmdLine += './runSignalScripts.sh -i %s -p %s -f %s --ext %s --intLumi %s --year %s --massList %s --bs %s --analysis %s --scales %s --scalesCorr %s --scalesGlobal %s --smears %s --useSSF 1 --verbosity %s '%(ws_fullFileNames,procs,cats,ext,lumi[year],year,massPoints,beamspot,analysis,scales,scalesCorr,scalesGlobal,smears,verbosity)
+    # if batch not specified, run locally
+    if batch == '': cmdLine += './runSignalScripts.sh -i %s -w %s -p %s -f %s --ext %s --intLumi %s --year %s --massList %s --bs %s --analysis %s --scales %s --scalesCorr %s --scalesGlobal %s --smears %s --useSSF 1 --verbosity %s '%(ws_fullFileNames,website,procs,cats,ext,lumi[year],year,massPoints,beamspot,analysis,scales,scalesCorr,scalesGlobal,smears,verbosity)
 
-    # run with batch 
-    else: cmdLine += './runSignalScripts.sh -i %s -p %s -f %s --ext %s --intLumi %s --year %s --batch %s --queue %s --massList %s --bs %s --analysis %s --scales %s --scalesCorr %s --scalesGlobal %s --smears %s --useSSF 1 --verbosity %s'%(ws_fullFileNames,procs,cats,ext,lumi[year],year,batch,queue,massPoints,beamspot,analysis,scales,scalesCorr,scalesGlobal,smears,verbosity)
-    
+    # run with batch
+    else: cmdLine += './runSignalScripts.sh -i %s -w %s -p %s -f %s --ext %s --intLumi %s --year %s --batch %s --queue %s --massList %s --bs %s --analysis %s --scales %s --scalesCorr %s --scalesGlobal %s --smears %s --useSSF 1 --verbosity %s'%(ws_fullFileNames,website,procs,cats,ext,lumi[year],year,batch,queue,massPoints,beamspot,analysis,scales,scalesCorr,scalesGlobal,smears,verbosity)
+
     finishCommand(cmdLine,useDCB,mode,printOnly)
 
 print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUNNING SIGNAL SCRIPTS (END) ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"

@@ -11,6 +11,7 @@ FTESTONLY=0
 PSEUDODATAONLY=0
 PSEUDODATADAT=""
 SIGFILE=""
+MASSSTEP=1
 BKGPLOTSONLY=0
 SEED=0
 INTLUMI=1
@@ -27,6 +28,7 @@ usage(){
 
 echo "-h|--help)"
 echo "-i|--inputFile)"
+echo "-w|--website) "
 echo "-p|--procs ) (default= ggh)"
 echo "-f|--flashggCats) (default= UntaggedTag_0,UntaggedTag_1,UntaggedTag_2,UntaggedTag_3,UntaggedTag_4,VBFTag_0,VBFTag_1,VBFTag_2,TTHHadronicTag,TTHLeptonicTag,VHHadronicTag,VHTightTag,VHLooseTag,VHEtTag)"
 echo "--ext)  (default= auto)"
@@ -34,6 +36,7 @@ echo "--fTestOnly) "
 echo "--pseudoDataOnly) "
 echo "--pseudoDataDat)"
 echo "--sigFile) "
+echo "--MASSSTEP) "
 echo "--bkgPlotsOnly)"
 echo "--seed) for pseudodata random number gen seed (default $SEED)"
 echo "--intLumi) specified in fb^-{1} (default $INTLUMI)) "
@@ -50,7 +53,7 @@ echo "--analysis) analysis to run on"
 
 
 # options may be followed by one colon to indicate they have a required argument
-if ! options=$(getopt -u -o hi:p:f: -l help,inputFile:,procs:,flashggCats:,ext:,fTestOnly,pseudoDataOnly,bkgPlotsOnly,pseudoDataDat:,sigFile:,seed:,intLumi:,year:,unblind,isData,batch:,queue:,analysis: -- "$@")
+if ! options=$(getopt -u -o hi:w:p:f: -l help,inputFile:,website:,procs:,flashggCats:,ext:,fTestOnly,pseudoDataOnly,bkgPlotsOnly,pseudoDataDat:,sigFile:,MASSSTEP:,seed:,intLumi:,year:,unblind,isData,batch:,queue:,analysis: -- "$@")
 then
 # something went wrong, getopt will put out an error message for us
 exit 1
@@ -62,6 +65,7 @@ do
 case $1 in
 -h|--help) usage; exit 0;;
 -i|--inputFile) FILE=$2; shift ;;
+-w|--website) WEBSITE=$2; shift ;;
 -p|--procs) PROCS=$2; shift ;;
 -f|--flashggCats) CATS=$2; shift ;;
 --ext) EXT=$2; shift ;;
@@ -69,6 +73,7 @@ case $1 in
 --pseudoDataOnly) PSEUDODATAONLY=1;;
 --pseudoDataDat) PSEUDODATADAT=$2; shift;;
 --sigFile) SIGFILE=$2; shift;;
+--MASSSTEP) MASSSTEP=$2; shift;;
 --bkgPlotsOnly) BKGPLOTSONLY=1;;
 --seed) SEED=$2; shift;;
 --intLumi) INTLUMI=$2; shift;;
@@ -159,8 +164,8 @@ if [ $ISDATA == 1 ]; then
 OPT=" --isData 1"
 fi
 
-echo " ./bin/fTest -i $FILE --saveMultiPdf CMS-HGG_multipdf_$EXT.root  -D $OUTDIR/bkgfTest$DATAEXT -f $CATS $OPT --year $YEAR"
-./bin/fTest -i $FILE --saveMultiPdf CMS-HGG_multipdf_$EXT.root  -D $OUTDIR/bkgfTest$DATAEXT -f $CATS $OPT --year $YEAR
+echo " ./bin/fTest -i $FILE -w $WEBSITE --saveMultiPdf CMS-HGG_multipdf_$EXT.root  -D $OUTDIR/bkgfTest$DATAEXT -f $CATS $OPT --year $YEAR"
+./bin/fTest -i $FILE -w $WEBSITE --saveMultiPdf CMS-HGG_multipdf_$EXT.root  -D $OUTDIR/bkgfTest$DATAEXT -f $CATS $OPT --year $YEAR
 
 OPT=""
 fi
@@ -175,10 +180,12 @@ echo "-->Create Background Validation plots"
 echo "--------------------------------------"
 
 echo "Analysis: $ANALYSIS"
+echo "SIGFILE: $SIGFILE"
 
 if [ "$SIGFILE" != "" ]; then
 SIG="-s $SIGFILE"
 fi
+echo "SIGFILE: $SIG"
 if [ $UNBLIND == 1 ]; then
 OPT=" --unblind"
 fi
@@ -187,8 +194,8 @@ if [ "$ANALYSIS" != "" ]; then
   ANOption="--analysis ${ANALYSIS}"
 fi 
 
-echo "./scripts/subBkgPlots.py -b CMS-HGG_multipdf_$EXT.root -d $OUTDIR/bkgPlots$DATAEXT -S 13 --isMultiPdf --useBinnedData  --doBands --massStep 1 $SIG -L 100 -H 180 -f $CATS -l $CATS --intLumi $INTLUMI $OPT --batch $BATCH -q $QUEUE --year $YEAR $ANOption"
-./scripts/subBkgPlots.py -b CMS-HGG_multipdf_$EXT.root -d $OUTDIR/bkgPlots$DATAEXT -S 13 --isMultiPdf --useBinnedData  --doBands  --massStep 1 $SIG -L 100 -H 180 -f $CATS -l $CATS --intLumi $INTLUMI $OPT --batch $BATCH -q $QUEUE --year $YEAR $ANOption
+echo "./scripts/subBkgPlots.py -b CMS-HGG_multipdf_$EXT.root -d $OUTDIR/bkgPlots$DATAEXT -w $WEBSITE -S 13 --makeCrossCheckProfPlots 0 --isMultiPdf --useBinnedData  --doBands --massStep $MASSSTEP $SIG -L 100 -H 180 -f $CATS -l $CATS --intLumi $INTLUMI $OPT --batch $BATCH -q $QUEUE --year $YEAR $ANOption"
+./scripts/subBkgPlots.py -b CMS-HGG_multipdf_$EXT.root -d $OUTDIR/bkgPlots$DATAEXT -w $WEBSITE -S 13 --makeCrossCheckProfPlots 0 --isMultiPdf --useBinnedData  --doBands  --massStep $MASSSTEP $SIG -L 100 -H 180 -f $CATS -l $CATS --intLumi $INTLUMI $OPT --batch $BATCH -q $QUEUE --year $YEAR $ANOption
 
 # FIX THIS FOR CONDOR: 
 #continueLoop=1

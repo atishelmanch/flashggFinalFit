@@ -5,6 +5,7 @@ parser = OptionParser()
 parser.add_option("-b","--bkgfilename",help="Data and background workspace file")
 parser.add_option("-s","--sigfilename",help="Signal file (can be binned or parametric) or left blank")
 parser.add_option("-d","--outDir",default="BkgPlots",help="Out directory for plots default: %default")
+parser.add_option("-w","--website",default="website",help="Out WWW directory for plots default: %default")
 parser.add_option("-c","--cats",type="int",help="Number of categories to run")
 parser.add_option("-f","--flashggCats",help="flashggCats : UntaggedTag_0,UntaggedTag_1,UntaggedTag_2,UntaggedTag_3,UntaggedTag_4,VBFTag_0,VBFTag_1,VBFTag_2,TTHHadronicTag,TTHLeptonicTag,VHHadronicTag,VHTightTag,VHLooseTag,VHEtTag")
 parser.add_option("-l","--catLabels",default="mk_default",help="Category labels (comma separated) default will use Category %cat")
@@ -34,6 +35,7 @@ import subprocess
 
 print'analysis =',options.analysis
 print'options.useBinnedData = ',options.useBinnedData
+print'sigfilename = ',options.sigfilename
 
 os.system('mkdir -p %s'%options.outDir)
 
@@ -63,7 +65,7 @@ for cat in range(ncats):
   print "cat = ",cat
   print "nCatLabels = ",len(options.catLabels)
   print ""
-  execLine = '$CMSSW_BASE/src/flashggFinalFit/Background/bin/makeBkgPlots -f %s -b %s -o %s/BkgPlots_cat%d.root -d %s -c %d -l \"%s\"'%(options.flashggCats,options.bkgfilename,options.outDir,cat,options.outDir,cat,options.catLabels[cat])
+  execLine = '$CMSSW_BASE/src/flashggFinalFit/Background/bin/makeBkgPlots -f %s -b %s -o %s/BkgPlots_cat%d.root -w %s -d %s -c %d -l \"%s\"'%(options.flashggCats,options.bkgfilename,options.outDir,cat,options.website,options.outDir,cat,options.catLabels[cat])
 #  execLine = '$PWD -b %s -s %s -o %s/BkgPlots_cat%d.root -d %s -c %d -l \"%s\"'%(options.bkgfilename,options.sigfilename,options.outDir,cat,options.outDir,cat,options.catLabels[cat])
   execLine += " --sqrts %d "%options.sqrts
   execLine += " --intLumi %f "%options.intLumi
@@ -74,7 +76,8 @@ for cat in range(ncats):
   if options.higgsResolution:
     execLine += ' --higgsResolution %s'%(options.higgsResolution)
   if options.sigfilename:
-    execLine += ' -s %s'%(options.sigfilename.replace('.root','_%s.root')%options.catLabels[cat])
+    # execLine += ' -s %s'%(options.sigfilename.replace('.root','_%s.root')%options.catLabels[cat])
+    execLine += ' -s %s'%(options.sigfilename)
   if options.unblind:
     execLine += ' --unblind'
   if options.isMultiPdf:

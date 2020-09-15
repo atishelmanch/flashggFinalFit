@@ -10,16 +10,16 @@ def get_options():
 
   # Take inputs from a config file: if this is used then ignore all other options
   parser.add_option('--inputConfig', dest='inputConfig', default='', help="Name of input config file (if specified will ignore other options)")
-  
-  # Setup 
-  parser.add_option('--analysis', dest='analysis', default='datacard', help="analysis option") 
-  parser.add_option('--analysis_type', dest='analysis_type', default='', help="analysis type. For HHWWgg: Res, EFT, NMSSM") 
-  parser.add_option('--FinalState', dest='FinalState', default='', help="Used for HHWWgg. Ex) qqlnu, lnulnu, qqqq") 
-  parser.add_option('--HHWWggCatLabel', dest='HHWWggCatLabel', default='UnLabelled', help="Option to add to name of comine output files") 
+
+  # Setup
+  parser.add_option('--analysis', dest='analysis', default='datacard', help="analysis option")
+  parser.add_option('--analysis_type', dest='analysis_type', default='', help="analysis type. For HHWWgg: Res, EFT, NMSSM")
+  parser.add_option('--FinalState', dest='FinalState', default='', help="Used for HHWWgg. Ex) qqlnu, lnulnu, qqqq")
+  parser.add_option('--HHWWggCatLabel', dest='HHWWggCatLabel', default='UnLabelled', help="Option to add to name of comine output files")
   parser.add_option('--mode', dest='mode', default='datacard', help="Running mode. Options: [datacard,combine,combinePlots,effAcc,yields]")
   parser.add_option('--inputWSDir', dest='inputWSDir', default='/vols/cms/es811/FinalFits/ws_ReweighAndNewggHweights', help="Directory storing flashgg workspaces" )
   parser.add_option('--cats', dest='cats', default='UntaggedTag_0,VBFTag_0', help="Define categories")
-  parser.add_option('--ext', dest='ext', default='test', help="Extension: has to match that used for signal and background modelling") 
+  parser.add_option('--ext', dest='ext', default='test', help="Extension: has to match that used for signal and background modelling")
   parser.add_option('--year', dest='year', default='2016', help="Dataset year")
 
   parser.add_option('--signalProcs', dest='signalProcs', default='all', help="Comma separated list of signal processes: used for defining signal in effAcc. Example for HIG-18-029 would be GG2H,VBF")
@@ -39,12 +39,12 @@ def get_options():
   # Miscellaneous options
   parser.add_option('--printOnly', dest='printOnly', default=0, type='int', help="Dry run: print command only")
   parser.add_option('--doSystematics', dest='doSystematics', default='0', help="Queue")
-  
+
   return parser.parse_args()
 
 (opt,args) = get_options()
 
-print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUNNING COMBINE SCRIPTS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" 
+print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUNNING COMBINE SCRIPTS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # IF using config file then extract options:
@@ -87,7 +87,7 @@ if opt.inputConfig != '':
 
 #Else extract from option parser
 else:
-  analysis     = opt.analysis 
+  analysis     = opt.analysis
   analysis_type = opt.analysis_type
   FinalState   = opt.FinalState
   HHWWggCatLabel = opt.HHWWggCatLabel
@@ -118,7 +118,7 @@ if mode not in ['datacard','combine','combinePlots','effAcc','yields']:
 ws_fileNames = []
 for root, dirs, files in os.walk( inputWSDir ):
   for fileName in files:
-    if (analysis != "HHWWgg") and not fileName.startswith('output_'): continue # relax constraint for HHWWgg due to different naming convention 
+    if (analysis != "HHWWgg") and not fileName.startswith('output_'): continue # relax constraint for HHWWgg due to different naming convention
     if not fileName.endswith('.root'): continue
     ws_fileNames.append( fileName )
 
@@ -137,14 +137,14 @@ if analysis == "HHWWgg":
 else:
   for fileName in ws_fileNames:
     proc = fileName.split('pythia8_')[1].split('.root')[0]
-    if 'M125' in fileName: 
+    if 'M125' in fileName:
       ws_fullFileNames_125 += "%s/%s,"%(inputWSDir,fileName)
       if signalProcs == 'all': ws_fullFileNames_effAcc += "%s/%s,"%(inputWSDir,fileName)
-      else: 
+      else:
         if proc in signalProcs.split(","): ws_fullFileNames_effAcc += "%s/%s,"%(inputWSDir,fileName)
     elif 'M120' in fileName or 'M130' in fileName:
       if signalProcs == 'all': ws_fullFileNames_effAcc += "%s/%s,"%(inputWSDir,fileName)
-      else: 
+      else:
         if proc in signalProcs.split(","): ws_fullFileNames_effAcc += "%s/%s,"%(inputWSDir,fileName)
   ws_fullFileNames_125 = ws_fullFileNames_125[:-1]
   ws_fullFileNames_effAcc = ws_fullFileNames_effAcc[:-1]
@@ -161,7 +161,7 @@ if doUEPS:
 
 if analysis == "HHWWgg": procs = signalProcs
 
-else: 
+else:
   # Extract list of procs
   procs = ''
   for fileName in ws_fileNames:
@@ -213,9 +213,9 @@ elif mode == "yields": print " --> Making yields table..."
 # Construct input command
 if mode not in ['effAcc','yields']:
   cmdLine = './runCombineScripts.sh -i %s -p %s -f %s --ext %s --intLumi %s --year %s --batch %s --dataFile %s --isData '%(ws_fullFileNames_125,procs,cats,ext,lumi[year],year,batch,dataFile)
-  if mode == 'datacard': 
-    # for HHWWgg analysis, need to create datacard for each mass point 
-    if analysis == "HHWWgg": 
+  if mode == 'datacard':
+    # for HHWWgg analysis, need to create datacard for each mass point
+    if analysis == "HHWWgg":
       filesList = ws_fullFileNames.split(',')
       for f in filesList:
         print
@@ -223,7 +223,7 @@ if mode not in ['effAcc','yields']:
         print
         # ext = _HHWWgg_v2-3_2017_X280_WWgg_qqlnugg
         shortExt = "%s"%ext
-        
+
         massExt = f.split('/')[-1].split('.')[0]
         thisExt = ext + '_' + massExt
         cmdLine = './runCombineScripts.sh -i %s -p %s -f %s --ext %s --intLumi %s --year %s --dataFile %s --isData --doSystematics %s --shortExt %s --HHWWggCatLabel %s '%(f,procs,cats,thisExt,lumi[year],year,dataFile,doSystematics,shortExt,HHWWggCatLabel)
@@ -231,11 +231,11 @@ if mode not in ['effAcc','yields']:
         cmdLine += ' --datacardOnly --smears %s --scales %s --scalesCorr %s --scalesGlobal %s --analysis %s --verbose 1 --analysis_type %s --FinalState %s'%(smears,scales,scalesCorr,scalesGlobal,analysis,analysis_type,FinalState)
         print'cmdLine: ',cmdLine
         os.system( cmdLine )
-    else: 
+    else:
       cmdLine += '--datacardOnly --smears %s --scales %s --scalesCorr %s --scalesGlobal %s --doStage1 '%(smears,scales,scalesCorr,scalesGlobal)
     if doUEPS:
-      cmdLine += ' --uepsFile '+uepsFileNames 
-  elif mode == 'combine': 
+      cmdLine += ' --uepsFile '+uepsFileNames
+  elif mode == 'combine':
     if analysis == "HHWWgg":
       filesList = ws_fullFileNames.split(',')
       for f in filesList:
