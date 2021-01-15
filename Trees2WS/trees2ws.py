@@ -94,6 +94,7 @@ if opt.inputConfig != '':
     theoryWeightContainers = _cfg['theoryWeightContainers']
     systematics      = _cfg['systematics']
     cats             = _cfg['cats']
+    analysis         = _cfg['analysis']
 
   else:
     print "[ERROR] %s config file does not exist. Leaving..."%opt.inputConfig
@@ -143,8 +144,21 @@ if opt.doSystematics: sdata = pandas.DataFrame()
 # Loop over categories: fill dataframe
 for cat in cats:
   print " --> Extracting events from category: %s"%cat
-  if inputTreeDir == '': treeName = "%s_%s_%s_%s"%(opt.productionMode,opt.inputMass,sqrts__,cat)
-  else: treeName = "%s/%s_%s_%s_%s"%(inputTreeDir,opt.productionMode,opt.inputMass,sqrts__,cat)
+  if "HHWWgg" in analysis:
+    finalStates = {
+      "SL" : "2Qlnu",
+      "FH" : "4Q",
+      "FL" : "2l2nu"
+    }
+    finalStateLabel = analysis.split('_')[1]
+    finalState = finalStates[finalStateLabel]
+    order = analysis.split('_')[2]
+    node = analysis.split('_')[3]
+    if inputTreeDir == '': treeName = "GluGluToHHTo2G%s_node_cHHH%s_%s_%s"%(inputTreeDir,finalState,node,sqrts__,cat)
+    else: treeName = "%s/GluGluToHHTo2G%s_node_cHHH%s_%s_%s"%(inputTreeDir,finalState,node,sqrts__,cat)
+  else: 
+    if inputTreeDir == '': treeName = "%s_%s_%s_%s"%(opt.productionMode,opt.inputMass,sqrts__,cat)
+    else: treeName = "%s/%s_%s_%s_%s"%(inputTreeDir,opt.productionMode,opt.inputMass,sqrts__,cat)
   print "    * tree: %s"%treeName
   # Extract tree from uproot
   t = f[treeName]
@@ -272,7 +286,19 @@ for stxsId in data[stxsVar].unique():
     t = array2tree(sa)
 
     # Define RooDataSet
-    dName = "%s_%s_%s_%s"%(opt.productionMode,opt.inputMass,sqrts__,cat)
+    if "HHWWgg" in analysis:
+      finalStates = {
+        "SL" : "2Qlnu",
+        "FH" : "4Q",
+        "FL" : "2l2nu"
+      }
+      finalStateLabel = analysis.split('_')[1]
+      finalState = finalStates[finalStateLabel]
+      order = analysis.split('_')[2]
+      node = analysis.split('_')[3]   
+      dName = "" 
+    else: dName = "%s_%s_%s_%s"%(opt.productionMode,opt.inputMass,sqrts__,cat)
+    
     
     # Make argset
     aset = make_argset(ws,varNames)
