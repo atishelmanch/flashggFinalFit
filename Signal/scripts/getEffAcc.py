@@ -24,6 +24,8 @@ def get_options():
   parser = OptionParser()
   parser.add_option('--inputWSDir', dest='inputWSDir', default='', help='Input WS directory')
   parser.add_option('--ext', default='test', help='Extension (to define analysis)')
+  parser.add_option('--doHHWWgg', default='true', help='HHWWgg analysi (to define analysis)')
+  parser.add_option('--HHWWggLabel', default='node_cHHH1_WWgg_lnulnugg', help='HHWWgg label (to define analysis)')
   parser.add_option('--procs', dest='procs', default='', help='Signal processes')
   parser.add_option('--massPoints', dest='massPoints', default='120,125,130', help='MH')
   parser.add_option('--skipCOWCorr', dest='skipCOWCorr', default=False, action="store_true", help="Skip centralObjectWeight correction for events in acceptance")
@@ -41,6 +43,7 @@ else:
   leave()
 
 # Define dataframe to store yields: cow = centralObjectWeight
+print "No NOTAG cats"
 if opt.skipCOWCorr: columns_data = ['massPoint','proc','cat','granular_key','nominal_yield']
 else: columns_data = ['massPoint','proc','cat','granular_key','nominal_yield','nominal_yield_COWCorr']
 data = pd.DataFrame( columns=columns_data )
@@ -52,7 +55,10 @@ for _mp in opt.massPoints.split(","):
   for _proc in opt.procs.split(","):
     print "    * proc = %s"%_proc
     # Find corresponding file
-    _WSFileName = glob.glob("%s/output*M%s*%s.root"%(opt.inputWSDir,_mp,_proc))[0]
+    if (opt.doHHWWgg)
+        _WSFileName = glob.glob("%s/output*M%s*%s_%s_%s.root"%(opt.inputWSDir,_mp,_proc,opt.HHWWggLabel,opt.cat))[0]
+    else:
+        _WSFileName = glob.glob("%s/output*M%s*%s.root"%(opt.inputWSDir,_mp,_proc))[0]
     f = ROOT.TFile(_WSFileName,'read')
     inputWS = f.Get(inputWSName__)
 

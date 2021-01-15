@@ -29,6 +29,8 @@ def get_options():
   parser.add_option('--procs', dest='procs', default='auto', help='Comma separated list of signal processes. auto = automatically inferred from input workspaces')
   parser.add_option('--ext', dest='ext', default='', help='Extension for saving') 
   parser.add_option('--mass', dest='mass', default='125', help='Input workspace mass')
+  parser.add_option('--HHWWggLabel', dest='HHWWggLabel', default='node_cHHH1_WWgg_lnulnugg', help='HHWWggLabel')
+  parser.add_option('--doHHWWgg', dest='doHHWWgg', default='True', help='doHHWWgg')
   parser.add_option('--mergeYears', dest='mergeYears', default=False, action="store_true", help="Merge category across years")
   parser.add_option('--skipBkg', dest='skipBkg', default=False, action="store_true", help="Only add signal processes to datacard")
   parser.add_option('--bkgScaler', dest='bkgScaler', default=1., type="float", help="Add overall scale factor for background")
@@ -89,7 +91,10 @@ for year in years:
 
     # Mapping to STXS definition here
     _procOriginal = proc
-    _proc = "%s_%s_%s"%(procToDatacardName(proc),year,decayMode)
+    if ( opt.doHHWWgg ):
+        _proc = "%s_%s_hwwhgg"%(procToDatacardName(proc),year)
+    else:
+        _proc = "%s_%s_%s"%(procToDatacardName(proc),year,decayMode)
     _proc_s0 = procToData(proc.split("_")[0])
 
     # Define category: add year tag if not merging
@@ -97,8 +102,15 @@ for year in years:
     else: _cat = "%s_%s"%(opt.cat,year)
 
     # Input flashgg ws 
-    _inputWSFile = glob.glob("%s/*M%s*_%s.root"%(inputWSDirMap[year],opt.mass,proc))[0]
-    _nominalDataName = "%s_%s_%s_%s"%(_proc_s0,opt.mass,sqrts__,opt.cat)
+    if ( opt.doHHWWgg ):
+        _inputWSFile = glob.glob("%s/output*M%s*_%s_%s_%s.root"%(inputWSDirMap[year],opt.mass,proc,opt.HHWWggLabel,opt.cat))[0]
+    else:
+        _inputWSFile = glob.glob("%s/output*M%s*_%s.root"%(inputWSDirMap[year],opt.mass,proc))[0]
+    
+    if ( opt.doHHWWgg ):
+        _nominalDataName = "%s_%s_%s_%s"%(_proc_s0,opt.HHWWggLabel,sqrts__,opt.cat)
+    else:
+        _nominalDataName = "%s_%s_%s_%s"%(_proc_s0,opt.mass,sqrts__,opt.cat)
 
     # If opt.skipZeroes check nominal yield if 0 then do not add
     skipProc = False
@@ -130,9 +142,14 @@ if( not opt.skipBkg)&( opt.cat != "NOTAG" ):
   _proc_data = "data_obs"
   if opt.mergeYears:
     _cat = opt.cat
-    _modelWSFile = "%s/CMS-HGG_%s_%s.root"%(opt.bkgModelWSDir,opt.bkgModelExt,_cat)
-    _model_bkg = "%s:CMS_%s_%s_%s_bkgshape"%(bkgWSName__,decayMode,_cat,sqrts__)
-    _model_data = "%s:roohist_data_mass_%s"%(bkgWSName__,_cat)
+    if( opt.doHHWWgg ):
+        _modelWSFile = "%s/CMS-HGG_%s_%s.root"%(opt.bkgModelWSDir,opt.bkgModelExt,_cat)
+        _model_bkg = "%s:CMS_hgg_%s_%s_bkgshape"%(bkgWSName__,_cat,sqrts__)
+        _model_data = "%s:roohist_data_mass_%s"%(bkgWSName__,_cat)
+    else:
+        _modelWSFile = "%s/CMS-HGG_%s_%s.root"%(opt.bkgModelWSDir,opt.bkgModelExt,_cat)
+        _model_bkg = "%s:CMS_%s_%s_%s_bkgshape"%(bkgWSName__,decayMode,_cat,sqrts__)
+        _model_data = "%s:roohist_data_mass_%s"%(bkgWSName__,_cat)
     _proc_s0 = '-' #not needed for data/bkg
     _inputWSFile = '-' #not needed for data/bkg
     _nominalDataName = '-' #not needed for data/bkg
@@ -146,9 +163,14 @@ if( not opt.skipBkg)&( opt.cat != "NOTAG" ):
     for year in years:
       _cat = "%s_%s"%(opt.cat,year)
       _catStripYear = opt.cat
-      _modelWSFile = "%s/CMS-HGG_%s_%s.root"%(opt.bkgModelWSDir,opt.bkgModelExt,_cat)
-      _model_bkg = "%s:CMS_%s_%s_%s_bkgshape"%(bkgWSName__,decayMode,_cat,sqrts__)
-      _model_data = "%s:roohist_data_mass_%s"%(bkgWSName__,_catStripYear)
+      if( opt.doHHWWgg ):
+          _modelWSFile = "%s/CMS-HGG_%s_%s.root"%(opt.bkgModelWSDir,opt.bkgModelExt,_cat)
+          _model_bkg = "%s:CMS_hgg_%s_%s_bkgshape"%(bkgWSName__,_cat,sqrts__)
+          _model_data = "%s:roohist_data_mass_%s_%s"%(bkgWSName__,_cat,sqrts__)
+      else:
+          _modelWSFile = "%s/CMS-HGG_%s_%s.root"%(opt.bkgModelWSDir,opt.bkgModelExt,_cat)
+          _model_bkg = "%s:CMS_%s_%s_%s_bkgshape"%(bkgWSName__,decayMode,_cat,sqrts__)
+          _model_data = "%s:roohist_data_mass_%s"%(bkgWSName__,_cat)
       _proc_s0 = '-' #not needed for data/bkg
       _inputWSFile = '-' #not needed for data/bkg
       _nominalDataName = '-' #not needed for data/bkg
@@ -209,6 +231,8 @@ for ir,r in data[data['type']=='sig'].iterrows():
 
   # Open input WS file and extract workspace
   f_in = ROOT.TFile(r.inputWSFile)
+  print r.inputWSFile
+  print r.nominalDataName
   inputWS = f_in.Get(inputWSName__)
   # Extract nominal RooDataSet and yield
   rdata_nominal = inputWS.data(r.nominalDataName)

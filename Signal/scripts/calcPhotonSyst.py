@@ -25,6 +25,8 @@ def get_options():
   parser.add_option("--xvar", dest='xvar', default='CMS_hgg_mass', help="Observable")
   parser.add_option("--cat", dest='cat', default='', help="RECO category")
   parser.add_option("--procs", dest='procs', default='', help="Signal processes")
+  parser.add_option("--doHHWWgg", dest='doHHWWgg', default='True', help="do HHWWgg")
+  parser.add_option("--HHWWggLabel", dest='HHWWggLabel', default='node_cHHH1_WWgg_lnulnugg', help=" HHWWgg Label")
   parser.add_option("--ext", dest='ext', default='', help="Extension")
   parser.add_option("--inputWSDir", dest='inputWSDir', default='', help="Input flashgg WS directory")
   parser.add_option("--scales", dest='scales', default='', help="Photon shape systematics: scales")
@@ -113,8 +115,14 @@ data = pd.DataFrame( columns=columns_data )
 # Loop over processes and add row to dataframe
 for _proc in opt.procs.split(","):
   # Glob M125 filename
-  _WSFileName = glob.glob("%s/output*M125*%s.root"%(opt.inputWSDir,_proc))[0]
-  _nominalDataName = "%s_125_%s_%s"%(procToData(_proc.split("_")[0]),sqrts__,opt.cat)
+  if ( opt.doHHWWgg ):
+    _WSFileName = glob.glob("%s/output*M125*%s_%s_%s.root"%(opt.inputWSDir,_proc,opt.HHWWggLabel,opt.cat))[0]
+  else:
+    _WSFileName = glob.glob("%s/output*M125*%s.root"%(opt.inputWSDir,_proc))[0]
+  if ( opt.doHHWWgg ):
+     _nominalDataName = "%s_%s_%s_%s"%(procToData(_proc.split("_")[0]),opt.HHWWggLabel,sqrts__,opt.cat)
+  else:
+     _nominalDataName = "%s_125_%s_%s"%(procToData(_proc.split("_")[0]),sqrts__,opt.cat)
   data = data.append({'proc':_proc,'cat':opt.cat,'inputWSFile':_WSFileName,'nominalDataName':_nominalDataName}, ignore_index=True, sort=False)
 
 # Loop over rows in dataFrame and open ws

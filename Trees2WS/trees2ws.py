@@ -115,6 +115,7 @@ if opt.year == '2018': systematics.append("JetHEM")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # UPROOT file
 f = uproot.open(opt.inputTreeFile)
+print inputTreeDir
 if inputTreeDir == '': listOfTreeNames == f.keys()
 else: listOfTreeNames = f[inputTreeDir].keys()
 # If cats = 'auto' then determine from list of trees
@@ -313,12 +314,13 @@ for stxsId in data[stxsVar].unique():
     del sa
 
     if opt.doSystematics:
-      # b) make RooDataHists for systematic variations
+      print "make RooDataHists for systematic variations"
       if cat == "NOTAG": continue
       for s in systematics:
         for direction in ['Up','Down']:
           # Create mask for systematic variation
-          mask = (sdf['type']=='%s%s'%(s,direction))&(sdf['cat']==cat)
+          #  mask = (sdf['type']=='%s%s'%(s,direction))&(sdf['cat']==cat)
+          mask = (sdf['type']=='nominal')&(sdf['cat']==cat)
           # Convert dataframe to structured array, then to ROOT tree
           sa = sdf[mask].to_records()
           t = array2tree(sa)
@@ -331,9 +333,9 @@ for stxsId in data[stxsVar].unique():
           for var in systematicsVars:
             if var != "weight": systematicsVarsDropWeight.append(var)
           aset = make_argset(ws,systematicsVarsDropWeight)
-          
           h = ROOT.RooDataHist(hName,hName,aset)
           for ev in t:
+            #  print "===================",ev
             for v in systematicsVars:
               if v == "weight": continue
               else: ws.var(v).setVal(getattr(ev,v))

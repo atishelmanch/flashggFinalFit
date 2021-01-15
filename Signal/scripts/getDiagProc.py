@@ -22,6 +22,8 @@ def get_options():
   parser = OptionParser()
   parser.add_option('--inputWSDir', dest='inputWSDir', default='', help='Input WS directory')
   parser.add_option('--ext', default='test', help='Extension (to define analysis)')
+  parser.add_option('--doHHWWgg', default='true', help='HHWWgg analyses (to define analysis)')
+  parser.add_option('--HHWWggLabel', default='node_cHHH1_WWgg_lnulnugg', help='HHWWgg Label (to define analysis)')
   parser.add_option('--MH', dest='MH', default='125', help='MH')
   parser.add_option('--makeSimpleFTest', dest='makeSimpleFTest', default=False, action="store_true", help='Produce simple fTest json with diagonal proc values set to nRV,nWV (else=1,1)')
   parser.add_option('--nRV', dest='nRV', default='3', help='Number of gaussians for diag proc (RV)')
@@ -44,7 +46,10 @@ for cat in allCats.split(","):
 for proc in allProcs.split(","):
   print " --> Processing: %s"%proc
   # Open workspace
-  _WSFileName = glob.glob("%s/output*M%s*%s.root"%(opt.inputWSDir,opt.MH,proc))[0]
+  if ( opt.doHHWWgg ):
+    _WSFileName = glob.glob("%s/output*M%s*%s_%s_%s.root"%(opt.inputWSDir,opt.MH,proc,opt.HHWWggLabel,opt.cat))[0]
+  else:
+    _WSFileName = glob.glob("%s/output*M%s*%s.root"%(opt.inputWSDir,opt.MH,proc))[0]
   f = ROOT.TFile(_WSFileName,'read')
   inputWS = f.Get(inputWSName__)
 

@@ -792,14 +792,15 @@ int main(int argc, char* argv[]){
 		string thisdataBinned_name;
 
 		if ( isFlashgg_){
-			thisdataBinned_name =Form("roohist_data_mass_%s",flashggCats_[cat].c_str());
+			// thisdataBinned_name =Form("roohist_data_mass_%s",flashggCats_[cat].c_str());
+			thisdataBinned_name =Form("roohist_data_mass_%s_%s",flashggCats_[cat].c_str(),ext.c_str());//chuw
 			//	RooDataHist thisdataBinned(Form("roohist_data_mass_cat%d",cat),"data",*mass,*dataFull);
 			//	data = (RooDataSet*)&thisdataBinned;
 			//		std::cout << "debug " << thisdataBinned.GetName() << std::endl;
 
 			//RooDataSet *data = (RooDataSet*)dataFull;
 		} else {
-			thisdataBinned_name= Form("roohist_data_mass_cat%d",cat);
+			thisdataBinned_name= Form("roohist_data_mass_cat%d_%s",cat,ext.c_str());
 			//RooDataSet *data = (RooDataSet*)dataFull;
 		}
 		RooDataHist thisdataBinned(thisdataBinned_name.c_str(),"data",*mass,*dataFull);
@@ -975,7 +976,7 @@ int main(int argc, char* argv[]){
 			std::cout << "[INFO] Simple check of index "<< simplebestFitPdfIndex <<std::endl;
 
 			mass->setBins(nBinsForMass);
-			RooDataHist dataBinned(Form("roohist_data_mass_%s",catname.c_str()),"data",*mass,*dataFull);
+			RooDataHist dataBinned(Form("roohist_data_mass_%s_%s",catname.c_str(),ext.c_str()),"data",*mass,*dataFull);//chuw
 
 			// Save it (also a binned version of the dataset
 			outputws->import(*pdf);

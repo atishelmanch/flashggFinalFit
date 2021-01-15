@@ -26,7 +26,7 @@ cmsenv
 scram b -j 9
 
 # Install Flashgg Final Fit packages
-git clone -b dev_fggfinalfits_lite git@github.com:cms-analysis/flashggFinalFit.git
+git clone -b dev_fggfinalfits_lite git@github.com:chuwang1/flashggFinalFit.git
 cd flashggFinalFit/
 ```
 

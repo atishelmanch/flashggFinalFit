@@ -17,6 +17,8 @@ def get_options():
   parser.add_option('--procs', dest='procs', default='auto', help='Comma separated list of signal processes. auto = automatically inferred from input workspaces')
   parser.add_option('--ext', dest='ext', default='test', help='Extension for saving')
   parser.add_option('--mass', dest='mass', default='125', help='Input workspace mass')
+  parser.add_option('--HHWWggLabel', dest='HHWWggLabel', default='node_cHHH1', help='HHWWgg Label')
+  parser.add_option('--doHHWWgg', dest='doHHWWgg', default='True', help='do HHWWgg')
   parser.add_option('--mergeYears', dest='mergeYears', default=False, action="store_true", help="Merge category across years")
   parser.add_option('--skipBkg', dest='skipBkg', default=False, action="store_true", help="Only add signal processes to datacard")
   parser.add_option('--bkgScaler', dest='bkgScaler', default=1., type="float", help="Add overall scale factor for background")
@@ -51,6 +53,8 @@ options['inputWSDirMap'] = opt.inputWSDirMap
 options['procs'] = opt.procs
 options['ext'] = opt.ext
 options['mass'] = opt.mass
+options['HHWWggLabel'] = opt.HHWWggLabel
+options['doHHWWgg'] = opt.doHHWWgg
 options['sigModelWSDir'] = opt.sigModelWSDir
 options['sigModelExt'] = opt.sigModelExt
 options['bkgModelWSDir'] = opt.bkgModelWSDir

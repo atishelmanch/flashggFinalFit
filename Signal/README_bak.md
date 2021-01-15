@@ -1,37 +1,47 @@
 # Signal modelling
 
-## Preparation
-Before you run these scripts
-You need prepare the input Files
-And the input Files name should like this:
-```
-For HHWWgg samples:
-output_M125_{process}_{HHWWggLabel}_{catName}.root
-i.e
-output_M125_ggF_node_cHHH1_WWgg_lnulnugg_HHWWggTag_3.root
-
-For singleHiggs samples:
-output_M{mass}_{process}*.root
+There are a number of steps to perform when constructing the signal model (described below). It is recommended to construct a signal model for each year separately. This allows to keep track of both the year-dependent resolution effects and the year-dependent systematic uncertainties. Each step up to the packaging is ran using the `RunSignalScripts.py` script, which takes as input a config file e.g.:
 
 ```
-Once your input files are ready.
-For HHWWgg samples.
-We need to shift the 125 GeV samples to 120 and 130
-We can use this:
-````
-python ./scripts/shiftHiggsDatasets_test.py --inputDir ./Input/ --procs ggF --cats HHWWggTag_3 --HHWWggLabel node_cHHH1_WWgg_lnulnugg
-````
-After this step.
-We should change the replacementMap.
-./tools/replacementMap.py
-Change the process and cat.
+# Config file: options for signal fitting
+
+signalScriptCfg = {
+  
+  # Setup
+  'inputWSDir':'/vols/cms/jl2117/hgg/ws/UL/Sept20/MC_final/signal_2016', # dir storing flashgg workspaces
+  'procs':'auto', # if auto: inferred automatically from filenames (requires names to be of from *pythia8_{PROC}.root)
+  'cats':'auto', # if auto: inferred automatically from (0) workspace
+  'ext':'test_2016', # output directory extension
+  'analysis':'example', # To specify replacement dataset and XS*BR mapping (defined in ./tools/replacementMap.py and ./tools/XSBRMap.py respectively)
+  'year':'2016', # Use 'combined' if merging all years: not recommended
+  'massPoints':'120,125,130', # You can now run with a single mass point if necessary
+
+  #Photon shape systematics  
+  'scales':'HighR9EB,HighR9EE,LowR9EB,LowR9EE,Gain1EB,Gain6EB', # separate nuisance per year
+  'scalesCorr':'MaterialCentralBarrel,MaterialOuterBarrel,MaterialForward,FNUFEE,FNUFEB,ShowerShapeHighR9EE,ShowerShapeHighR9EB,ShowerShapeLowR9EE,ShowerShapeLowR9EB', # correlated across years
+  'scalesGlobal':'NonLinearity,Geant4', # affect all processes equally, correlated across years
+  'smears':'HighR9EBPhi,HighR9EBRho,HighR9EEPhi,HighR9EERho,LowR9EBPhi,LowR9EBRho,LowR9EEPhi,LowR9EERho', # separate nuisance per year
+
+  # Job submission options
+  'batch':'condor', # ['condor','SGE','IC','local']
+  'queue':'espresso' # use hep.q for IC
+
+}
+```
+The basic command for using `RunSignalScripts.py` is the following:
+```
+python RunSignalScripts.py --inputConfig {config_file}.py --mode {mode} --modeOpts "{list of options for specific mode}" --jobOpts "{list of options for job submission}"
+```
+To simply print the job scripts without submitting then add the option: `--printOnly`. You can then go to the respective `outdir_{ext}/{mode}/jobs` directory to run the individual scripts locally (great for testing and debugging!)
+
+In this new final fits package we have introduced a number of additional options which were not previously available. Firstly, you can now run the signal model for a single mass point: the polynominal defining the mass dependence on the fit parameters is set to a constant. Additionally, you can skip the splitting into the right vertex (RV) and wrong vertex (WV) scenarios (in fact the fraction of WV events for anything but ggH 0J is ~0, so the general rule of thumb is that it is okay to skip the splitting). In the new package the minimizer has been replaced with `scipy.minimize`, which means we no longer require the specialised ROOT class for the simultaneous signal fit for different mass points. For developers of this package you can find the Python class which performs the signal fit in `tools.simultaneousFit`. A simple application of this is shown in `simpleFit.py`. The construction of the final signal model is done using the Python class in `tools.finalModel.py`
 
 ## Signal F-test
 
 Test for determining the optimal number of gaussians to use in signal model. If you want to use the Double Crystal Ball (DCB) + Gaussian function for the models then you can skip the F-test.
 
 ```
-python RunSignalScripts.py --inputConfig HHWWgg_config_test_2017.py --mode fTest
+python RunSignalScripts.py --inputConfig config_test_2016.py --mode fTest
 ```
 This will create a separate job per analysis category, which outputs a json file (`./outdir_{ext}/fTest/json`) specifying the optimal number of Gaussians for each signal process for both the RV (right-vertex) and WV (wrong-vertex) scenarios. The optimal number of gaussians is chosen as the number which minimises the reduced chi2.
 
@@ -47,7 +57,7 @@ For other options when running `fTest`, see `./scripts/fTest`
 
 For calculating the effect of the photon systematics on the mean, width and rate of the signal spectrum.
 ```
-python RunSignalScripts.py --inputConfig HHWWgg_config_test_2017.py --mode calcPhotonSyst
+python RunSignalScripts.py --inputConfig config_test_2016.py --mode calcPhotonSyst
 ```
 This will again create a separate job per category, where the output is a pandas dataframe stored as a `.pkl` file. The dataframe contains the constants which describe how the systematics (specified in the `config` file) affect the mean, sigma and rate of each signal process. The final model construction will lift these constants directly from the `.pkl` files (replaced the monolithic `.dat` files in the old Final Fits).
 
@@ -55,7 +65,7 @@ If you do not wish to account for the photon systematics then this step can be s
 
 For other options when running `calcPhotonSyst`, see `./scripts/calcPhotonSyst` and add whatever you need to the `--modeOpts` string.
 
-## Extracting the efficiency x acceptance(not used right now)
+## Extracting the efficiency x acceptance
 
 The final models are normalised according to the following equation:
 ![equation](https://latex.codecogs.com/gif.latex?N_{ij}&space;=&space;(\sigma&space;\cdot&space;BR)_i&space;\times&space;(\epsilon&space;\cdot&space;\mathcal{A})_{ij}&space;\times&space;\mathcal{L})
@@ -70,7 +80,7 @@ python RunSignalScripts.py --inputConfig config_test_2016.py --mode getEffAcc
 The output is a json file specifying the `(eff x acc)` values for each signal processes in each analysis category (`./outdir_{ext}/getEffAcc/json`). This json file can then be read directly in the final model construction step.
 
 
-## Extracting the diagonal process for a given category(not used right now)
+## Extracting the diagonal process for a given category
 
 There are two options in the final model construction which require the knowledge of the diagonal process (i.e. highest sum of weights) in the analysis categories. The following mode determines the diagonal proc and outputs this info in a json file to be read by the final model construction:
 ```
@@ -87,7 +97,7 @@ Before you build the final models you MUST define the replacement dataset and th
 
 You are now ready to run the actual fit:
 ```
-python RunSignalScripts.py --inputConfig HHWWgg_config_test_2017.py --mode signalFit --groupSignalFitJobsByCat
+python RunSignalScripts.py -inputConfig config_test_2016.py --mode signalFit --groupSignalFitJobsByCat
 ```
 The `groupSignalFitJobsByCat` option will create a submission script per category. If removed, the default is to have a single script per process x category (which can be a very large number!). The output is a separate ROOT file for each process x category containing the signal fit workspace.
 

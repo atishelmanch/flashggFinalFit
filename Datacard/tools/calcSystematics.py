@@ -65,11 +65,16 @@ def factoryType(d,s):
   for ir, r in d[d['type']=='sig'].iterrows():
     f = ROOT.TFile(r.inputWSFile)
     ws = f.Get(inputWSName__)
+    print inputWSName__
+    print r.inputWSFile
     dataHistUp = "%s_%sUp01sigma"%(r.nominalDataName,s['name'])
     dataHistDown = "%s_%sDown01sigma"%(r.nominalDataName,s['name'])
+    print dataHistUp
+    print dataHistDown
 
     # Check if syst is var (i.e. weight) in workspace
     if ws.allVars().selectByName("%s*"%(s['name'])).getSize():
+      print "RooDataSet"
       nWeights = ws.allVars().selectByName("%s*"%(s['name'])).getSize()
       ws.Delete()
       f.Close()
@@ -81,6 +86,7 @@ def factoryType(d,s):
 
     # Check if RooDataHist exists for syst
     elif(ws.data(dataHistUp)!=None)&(ws.data(dataHistDown)!=None):
+      print "RooDataHist"
       ws.Delete()
       f.Close()
       return "a_h"
@@ -97,6 +103,7 @@ def factoryType(d,s):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Function to extract yield variations for signal row in dataFrame
 def calcSystYields(_nominalDataName,_nominalDataContents,_inputWS,_systFactoryTypes,skipCOWCorr=True,proc="ggH",year='2016',ignoreWarnings=False):
+  print _nominalDataName
 
   errMessage = "WARNING" if ignoreWarnings else "ERROR"
   errString = "Using nominal yield" if ignoreWarnings else ""
