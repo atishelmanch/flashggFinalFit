@@ -26,7 +26,8 @@ def rooiter(x):
 
 # Extract all files to be merged
 fNames = {}
-for ext in opt.exts.split(","): fNames[ext] = glob.glob("outdir_%s/signalFit/output/CMS-HGG_sigfit_%s_*_%s.root"%(ext,ext,opt.cat))
+#  for ext in opt.exts.split(","): fNames[ext] = glob.glob("outdir_%s/signalFit/output/CMS-HGG_sigfit_%s_*_%s.root"%(ext,ext,opt.cat))
+for ext in opt.exts.split(","): fNames[ext] = glob.glob("outdir_%s/CMS-HGG_sigfit_%s*_%s.root"%(ext,ext,opt.cat))
 
 # Define ouput packaged workspace
 print " --> Packaging output workspaces"
@@ -38,6 +39,7 @@ data_merged = {}
 data_merged_names = []
 for mp in opt.massPoints.split(","): 
   data_merged["m%s"%mp] = ROOT.TFile(fNames[opt.exts.split(",")[0]][0]).Get("wsig_13TeV").data("sig_mass_m%s_%s"%(mp,opt.cat)).emptyClone("sig_mass_m%s_%s"%(mp,opt.cat))
+  print fNames[opt.exts.split(",")[0]][0],"sig_mass_m%s_%s"%(mp,opt.cat)
   data_merged_names.append( data_merged["m%s"%mp].GetName() )
 
 for ext, fNames_by_ext in fNames.iteritems():

@@ -75,7 +75,7 @@ def initialiseXSBR():
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~   
 class FinalModel:
   # Constructor
-  def __init__(self,_ssfMap,_proc,_cat,_ext,_year,_sqrts,_datasets,_xvar,_MH,_MHLow,_MHHigh,_massPoints,_xsbrMap,_procSyst,_scales,_scalesCorr,_scalesGlobal,_smears,_doVoigtian,_useDCB,_skipVertexScenarioSplit,_skipSystematics,_doEffAccFromJson):
+  def __init__(self,_ssfMap,_proc,_cat,_Label,_ext,_year,_sqrts,_datasets,_xvar,_MH,_MHLow,_MHHigh,_massPoints,_xsbrMap,_procSyst,_scales,_scalesCorr,_scalesGlobal,_smears,_doVoigtian,_useDCB,_skipVertexScenarioSplit,_skipSystematics,_doEffAccFromJson):
     self.ssfMap = _ssfMap
     self.proc = _proc
     self.procSyst = _procSyst # Signal process used for systematics (useful for low stat cases)
@@ -83,7 +83,8 @@ class FinalModel:
     self.ext = _ext
     self.year = _year
     self.sqrts = _sqrts
-    self.name = "%s_%s_%s_%s"%(self.proc,self.year,self.cat,self.sqrts)
+    self.Label = _Label 
+    self.name = "%s_%s_%s_%s_%s"%(self.proc,self.Label,self.year,self.cat,self.sqrts)
     self.datasets = _datasets
     self.xvar = _xvar
     self.aset = ROOT.RooArgSet(self.xvar)
@@ -137,15 +138,34 @@ class FinalModel:
   def buildXSBRSplines(self):
     mh = np.linspace(120.,130.,101)
     # XS
-    fp = self.xsbrMap[self.proc]['factor'] if 'factor' in self.xsbrMap[self.proc] else 1.
-    mp = self.xsbrMap[self.proc]['mode']
-    xs = fp*self.XSBR[mp]
+    if ("ggF" in self.proc or "GluGluToHHTo" in self.proc ):
+        xs=0.001*np.ones(101,dtype = float)
+    elif ("VH" in self.proc or "wzh" in self.proc ) : 
+        mp1 = 'WH'
+        mp2 = 'ZH'
+        xs = self.XSBR[mp1] + self.XSBR[mp2]
+    elif ("ttH" in self.proc or "tth" in self.proc ) : 
+        mp = 'ttH'
+        xs = self.XSBR[mp]
+    elif ("ggH" in self.proc or "ggh" in self.proc ) : 
+        mp = 'ggH'
+        xs = self.XSBR[mp]
+    elif ("VBF" in self.proc or "vbf" in self.proc ) :
+        mp = 'qqH'
+        xs = self.XSBR[mp]
+    else:
+        fp = self.xsbrMap[self.proc]['factor'] if 'factor' in self.xsbrMap[self.proc] else 1.
+        mp = self.xsbrMap[self.proc]['mode']
+        xs = fp*self.XSBR[mp]
     self.Splines['xs'] = ROOT.RooSpline1D("fxs_%s_%s"%(self.proc,self.sqrts),"fxs_%s_%s"%(self.proc,self.sqrts),self.MH,len(mh),mh,xs)
     # BR
-    fd = self.xsbrMap['decay']['factor'] if 'factor' in self.xsbrMap['decay'] else 1.
-    md = self.xsbrMap['decay']['mode']
-    br = fd*self.XSBR[md]
-    self.Splines['br'] = ROOT.RooSpline1D("fbr_%s"%self.sqrts,"fbr_%s"%self.sqrts,self.MH,len(mh),mh,br)
+    if ("ggF" in self.proc or "GluGluToHHTo" in self.proc ):
+        br=np.ones(101,dtype = float)
+    else:
+        fd = self.xsbrMap['decay']['factor'] if 'factor' in self.xsbrMap['decay'] else 1.
+        md = self.xsbrMap['decay']['mode']
+        br = fd*self.XSBR[md]
+    self.Splines['br'] = ROOT.RooSpline1D("fbr_%s_%s"%(self.proc,self.sqrts),"fbr_%s_%s"%(self.proc,self.sqrts),self.MH,len(mh),mh,br)
 
   def buildEffAccSpline(self):
     # Two treatments: load from json created with getEffAcc.py script or calc from sum of weights
@@ -164,7 +184,9 @@ class FinalModel:
         sumw = self.datasets[mp].sumEntries()
         self.MH.setVal(float(mp))
         xs,br = self.Splines['xs'].getVal(), self.Splines['br'].getVal()
+        print "xs:",xs,",br:",br,",lumi:",lumiScaleFactor
         ea.append(sumw/(lumiScaleFactor*xs*br)) 
+        print "ea:",ea
     # If single mass point then add MHLow and MHHigh dummy points for constant ea
     if len(ea) == 1: ea, mh = [ea[0],ea[0],ea[0]], [float(self.MHLow),mh[0],float(self.MHHigh)]
     # Convert to numpy arrays and make spline
@@ -341,24 +363,22 @@ class FinalModel:
       # Add systematics
       formula += "*(1."
       # Global
-      if 'scalesGlobal' in self.NuisanceMap:
-        for sName, sInfo in self.NuisanceMap['scalesGlobal'].iteritems():
-          formula += "+@%g"%dependents.getSize()
-          # For adding additional factor
-          for so in sInfo['opts']: 
-            if "factor_%s"%self.cat in so:
-              additionalFactor = float(so.split("=")[-1])
-              formula += "*%3.1f"%additionalFactor
-          dependents.add(sInfo['param'])
+      for sName, sInfo in self.NuisanceMap['scalesGlobal'].iteritems():
+        formula += "+@%g"%dependents.getSize()
+        # For adding additional factor
+        for so in sInfo['opts']: 
+          if "factor_%s"%self.cat in so:
+            additionalFactor = float(so.split("=")[-1])
+            formula += "*%3.1f"%additionalFactor
+        dependents.add(sInfo['param'])
       # Other systs: scales, scalesCorr, smears
       for sType in ['scales','scalesCorr','smears']:
-        if sType in self.NuisanceMap:
-          for sName, sInfo in self.NuisanceMap[sType].iteritems():
-            c = sInfo['meanConst'].getVal()
-            if abs(c)>=5.e-5:
-              formula += "+@%g*@%g"%(dependents.getSize(),dependents.getSize()+1)
-              dependents.add(sInfo['meanConst'])
-              dependents.add(sInfo['param'])
+        for sName, sInfo in self.NuisanceMap[sType].iteritems():
+          c = sInfo['meanConst'].getVal()
+          if abs(c)>=5.e-5:
+            formula += "+@%g*@%g"%(dependents.getSize(),dependents.getSize()+1)
+            dependents.add(sInfo['meanConst'])
+            dependents.add(sInfo['param'])
       formula += ")"
     self.Functions[meanName] = ROOT.RooFormulaVar(meanName,meanName,formula,dependents)
 
@@ -372,13 +392,12 @@ class FinalModel:
       # Add systematics
       formula += "*TMath::Max(1.e-2,(1."
       for sType in ['scales','scalesCorr','smears']:
-        if sType in self.NuisanceMap:
-          for sName, sInfo in self.NuisanceMap[sType].iteritems():
-            c = sInfo['sigmaConst'].getVal()
-            if c>=1e-4:
-              formula += "+@%g*@%g"%(dependents.getSize(),dependents.getSize()+1)
-              dependents.add(sInfo['sigmaConst'])
-              dependents.add(sInfo['param'])
+        for sName, sInfo in self.NuisanceMap[sType].iteritems():
+          c = sInfo['sigmaConst'].getVal()
+          if c>=1e-4:
+            formula += "+@%g*@%g"%(dependents.getSize(),dependents.getSize()+1)
+            dependents.add(sInfo['sigmaConst'])
+            dependents.add(sInfo['param'])
       formula += "))"
     self.Functions[sigmaName] = ROOT.RooFormulaVar(sigmaName,sigmaName,formula,dependents)
 
@@ -389,13 +408,12 @@ class FinalModel:
     if not skipSystematics:
       # Add systematics
       for sType in ['scales','scalesCorr','smears']:
-        if sType in self.NuisanceMap:
-          for sName, sInfo in self.NuisanceMap[sType].iteritems():
-            c = sInfo['rateConst'].getVal()
-            if c>=5.e-4:
-              formula += "+@%g*@%g"%(dependents.getSize(),dependents.getSize()+1)
-              dependents.add(sInfo['rateConst'])
-              dependents.add(sInfo['param'])
+        for sName, sInfo in self.NuisanceMap[sType].iteritems():
+          c = sInfo['rateConst'].getVal()
+          if c>=5.e-4:
+            formula += "+@%g*@%g"%(dependents.getSize(),dependents.getSize()+1)
+            dependents.add(sInfo['rateConst'])
+            dependents.add(sInfo['param'])
     formula += ")"
     self.Functions[rateName] = ROOT.RooFormulaVar(rateName,rateName,formula,dependents)
 

@@ -16,6 +16,10 @@ from plottingTools import * #getEffSigma function
 from commonTools import *
 from commonObjects import *
 
+##-- HHWWgg single higgs definiton 
+##-- For HHWWgg analysis where modelling single higgs processes 
+HHWWgg_singleHiggs_procs = ["ggh", "vbf", "wzh", "tth"]
+
 def leave():
   print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ HGG PHOTON SYST CALCULATOR (END) ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ "
   sys.exit(1)
@@ -25,6 +29,8 @@ def get_options():
   parser.add_option("--xvar", dest='xvar', default='CMS_hgg_mass', help="Observable")
   parser.add_option("--cat", dest='cat', default='', help="RECO category")
   parser.add_option("--procs", dest='procs', default='', help="Signal processes")
+  parser.add_option("--analysis", dest='analysis', default='STXS', help="Analysis type")
+  parser.add_option("--HHWWggLabel", dest='HHWWggLabel', default='node_cHHH1_WWgg_lnulnugg', help=" HHWWgg Label")
   parser.add_option("--ext", dest='ext', default='', help="Extension")
   parser.add_option("--inputWSDir", dest='inputWSDir', default='', help="Input flashgg WS directory")
   parser.add_option("--scales", dest='scales', default='', help="Photon shape systematics: scales")
@@ -113,8 +119,16 @@ data = pd.DataFrame( columns=columns_data )
 # Loop over processes and add row to dataframe
 for _proc in opt.procs.split(","):
   # Glob M125 filename
-  _WSFileName = glob.glob("%s/output*M125*%s.root"%(opt.inputWSDir,_proc))[0]
-  _nominalDataName = "%s_125_%s_%s"%(procToData(_proc.split("_")[0]),sqrts__,opt.cat)
+  if(opt.analysis == 'HHWWgg'):
+    if(_proc in HHWWgg_singleHiggs_procs):
+      _WSFileName = glob.glob("%s/output*M125*%s_%s.root"%(opt.inputWSDir,_proc,opt.cat))[0]
+      _nominalDataName = "%s_125_%s_%s"%(procToData(_proc.split("_")[0]),sqrts__,opt.cat)
+    else: 
+      _WSFileName = glob.glob("%s/output*M125*%s_%s_%s.root"%(opt.inputWSDir,_proc,opt.HHWWggLabel,opt.cat))[0]
+      _nominalDataName = "%s_%s_%s_%s"%(procToData(_proc.split("_")[0]),opt.HHWWggLabel,sqrts__,opt.cat)
+  else:
+     _WSFileName = glob.glob("%s/output*M125*%s_%s.root"%(opt.inputWSDir,_proc,opt.cat))[0]
+     _nominalDataName = "%s_125_%s_%s"%(procToData(_proc.split("_")[0]),sqrts__,opt.cat)
   data = data.append({'proc':_proc,'cat':opt.cat,'inputWSFile':_WSFileName,'nominalDataName':_nominalDataName}, ignore_index=True, sort=False)
 
 # Loop over rows in dataFrame and open ws

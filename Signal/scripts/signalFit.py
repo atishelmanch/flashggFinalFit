@@ -34,6 +34,7 @@ def get_options():
   parser.add_option("--ext", dest='ext', default='', help="Extension")
   parser.add_option("--proc", dest='proc', default='', help="Signal process")
   parser.add_option("--cat", dest='cat', default='', help="RECO category")
+  parser.add_option("--HHWWggLabel", dest='HHWWggLabel', default='node_cHHH1_WWgg_lnulnugg', help="HHWWgg label")
   parser.add_option("--year", dest='year', default='2016', help="Year")
   parser.add_option("--analysis", dest='analysis', default='STXS', help="Analysis handle: used to specify replacement map and XS*BR normalisations")
   parser.add_option('--massPoints', dest='massPoints', default='120,125,130', help="Mass points to fit")
@@ -46,21 +47,24 @@ def get_options():
   parser.add_option('--skipVertexScenarioSplit', dest='skipVertexScenarioSplit', default=False, action="store_true", help="Skip vertex scenario split")
   parser.add_option('--skipZeroes', dest='skipZeroes', default=False, action="store_true", help="Skip proc x cat is numEntries = 0., or sumEntries < 0.")
   # For systematics
-  parser.add_option('--skipSystematics', dest='skipSystematics', default=False, action="store_true", help="Skip shape systematics in signal model")
+  # parser.add_option('--skipSystematics', dest='skipSystematics', default=False, action="store_true", help="Skip shape systematics in signal model")
+  parser.add_option('--skipSystematics', dest='skipSystematics', default=True, action="store_true", help="Skip shape systematics in signal model")
   parser.add_option('--useDiagonalProcForSyst', dest='useDiagonalProcForSyst', default=False, action="store_true", help="Use diagonal process for systematics (requires diagonal mapping produced by getDiagProc script)")
   parser.add_option("--scales", dest='scales', default='', help="Photon shape systematics: scales")
   parser.add_option("--scalesCorr", dest='scalesCorr', default='', help='Photon shape systematics: scalesCorr')
   parser.add_option("--scalesGlobal", dest='scalesGlobal', default='', help='Photon shape systematics: scalesGlobal')
   parser.add_option("--smears", dest='smears', default='', help='Photon shape systematics: smears')
   # Parameter values
-  parser.add_option('--replacementThreshold', dest='replacementThreshold', default=100, type='int', help="Nevent threshold to trigger replacement dataset")
+  # parser.add_option('--replacementThreshold', dest='replacementThreshold', default=100, type='int', help="Nevent threshold to trigger replacement dataset")
+  # parser.add_option('--replacementThreshold', dest='replacementThreshold', default=50, type='int', help="Nevent threshold to trigger replacement dataset")
+  parser.add_option('--replacementThreshold', dest='replacementThreshold', default=-1, type='int', help="Nevent threshold to trigger replacement dataset") ##-- HHWWgg has low unweighted stats in single higgs processes 
   parser.add_option('--beamspotWidthData', dest='beamspotWidthData', default=3.4, type='float', help="Width of beamspot in data [cm]")
   parser.add_option('--beamspotWidthMC', dest='beamspotWidthMC', default=5.14, type='float', help="Width of beamspot in MC [cm]")
   parser.add_option('--MHPolyOrder', dest='MHPolyOrder', default=1, type='int', help="Order of polynomial for MH dependence")
   parser.add_option('--nBins', dest='nBins', default=80, type='int', help="Number of bins for fit")
   # Minimizer options
   parser.add_option('--minimizerMethod', dest='minimizerMethod', default='TNC', help="(Scipy) Minimizer method")
-  parser.add_option('--minimizerTolerance', dest='minimizerTolerance', default=1e-8, type='float', help="(Scipy) Minimizer toleranve")
+  parser.add_option('--minimizerTolerance', dest='minimizerTolerance', default=1e-8, type='float', help="(Scipy) Minimizer tolerance")
   return parser.parse_args()
 (opt,args) = get_options()
 
@@ -74,9 +78,14 @@ if( len(opt.massPoints.split(",")) == 1 )&( opt.MHPolyOrder > 0 ):
   print " --> [WARNING] Attempting to fit polynomials of O(MH^%g) for single mass point. Setting order to 0"%opt.MHPolyOrder
   opt.MHPolyOrder=0
 
+##-- HHWWgg single higgs definiton 
+##-- For HHWWgg analysis where modelling single higgs processes 
+HHWWgg_singleHiggs_procs = ["ggh", "vbf", "wzh", "tth"]
+
 # Add stopwatch function
 
 # Load replacement map
+
 if opt.analysis not in globalReplacementMap:
   print " --> [ERROR] replacement map does not exist for analysis (%s). Please add to tools/replacementMap.py"%opt.analysis
   leave()
@@ -89,7 +98,14 @@ if opt.analysis not in globalXSBRMap:
 else: xsbrMap = globalXSBRMap[opt.analysis]
 
 # Load RooRealVars
-nominalWSFileName = glob.glob("%s/output*M%s*%s.root"%(opt.inputWSDir,MHNominal,opt.proc))[0]
+if ( opt.analysis == 'HHWWgg' ):
+  if(opt.proc in HHWWgg_singleHiggs_procs):
+    nominalWSFileName = glob.glob("%s/output*M%s*%s_%s.root"%(opt.inputWSDir,MHNominal,opt.proc,opt.cat))[0]
+  else: 
+    # nominalWSFileName = glob.glob("%s/output*M%s*%s_%s_%s.root"%(opt.inputWSDir,MHNominal,opt.proc,opt.HHWWggLabel,opt.cat))[0]
+    nominalWSFileName = glob.glob("%s/output*M%s*%s_%s.root"%(opt.inputWSDir,MHNominal,opt.proc,opt.cat))[0]
+else:
+    nominalWSFileName = glob.glob("%s/output*M%s*%s_%s.root"%(opt.inputWSDir,MHNominal,opt.proc,opt.cat))[0]
 f0 = ROOT.TFile(nominalWSFileName,"read")
 inputWS0 = f0.Get(inputWSName__)
 xvar = inputWS0.var(opt.xvar)
@@ -105,10 +121,17 @@ MH.setConstant(True)
 
 if opt.skipZeroes:
   # Extract nominal mass dataset and see if entries == 0
+  print "%s/output*M%s*%s.root"%(opt.inputWSDir,MHNominal,opt.proc)
   WSFileName = glob.glob("%s/output*M%s*%s.root"%(opt.inputWSDir,MHNominal,opt.proc))[0]
   f = ROOT.TFile(WSFileName,"read")
   inputWS = f.Get(inputWSName__)
-  d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(opt.proc.split("_")[0]),MHNominal,sqrts__,opt.cat)),aset)
+  if ( opt.analysis == 'HHWWgg' ):
+    if(opt.proc in HHWWgg_singleHiggs_procs):
+      d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(opt.proc.split("_")[0]),MHNominal,sqrts__,opt.cat)),aset)
+    else:
+      d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(opt.proc.split("_")[0]),opt.HHWWggLabel,sqrts__,opt.cat)),aset)
+  else:
+     d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(opt.proc.split("_")[0]),MHNominal,sqrts__,opt.cat)),aset)
   if( d.numEntries() == 0. )|( d.sumEntries <= 0. ):
     print " --> (%s,%s) has zero events. Will not construct signal model"%(opt.proc,opt.cat)
     exit()
@@ -151,10 +174,27 @@ nominalDatasets = od()
 # For RV (or if skipping vertex scenario split)
 datasetRVForFit = od()
 for mp in opt.massPoints.split(","):
-  WSFileName = glob.glob("%s/output*M%s*%s.root"%(opt.inputWSDir,mp,procRVFit))[0]
+  if ( opt.analysis == 'HHWWgg' ):
+    if(opt.proc in HHWWgg_singleHiggs_procs):
+      WSFileName = glob.glob("%s/Shifted*M%s*%s_%s.root"%(opt.inputWSDir,mp,procRVFit,opt.cat))[0]
+    else: 
+    #  WSFileName = glob.glob("%s/Shifted*M%s*%s_%s_%s.root"%(opt.inputWSDir,mp,procRVFit,opt.HHWWggLabel,opt.cat))[0]
+      # WSFileName = glob.glob("%s/Shifted*M%s*%s_%s_%s.root"%(opt.inputWSDir,mp,procRVFit,opt.HHWWggLabel,opt.cat))[0]
+      WSFileName = glob.glob("%s/Shifted*M%s*%s_%s.root"%(opt.inputWSDir,mp,procRVFit,opt.cat))[0]
+  else:
+     WSFileName = glob.glob("%s/Shifted*M%s*%s_%s.root"%(opt.inputWSDir,mp,procRVFit,opt.cat))[0]
+     #  WSFileName = glob.glob("%s/output*M%s*%s_%s.root"%(opt.inputWSDir,mp,procRVFit,opt.cat))[0]
   f = ROOT.TFile(WSFileName,"read")
   inputWS = f.Get(inputWSName__)
-  d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(procRVFit.split("_")[0]),mp,sqrts__,catRVFit)),aset)
+  if ( opt.analysis == 'HHWWgg' ):
+     if(opt.proc in HHWWgg_singleHiggs_procs):
+      d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(procRVFit.split("_")[0]),mp,sqrts__,catRVFit)),aset)
+     else: 
+      print "%s_%s_%s_%s_%s"%(procToData(procRVFit.split("_")[0]),mp,opt.HHWWggLabel,sqrts__,catRVFit)
+      # d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(procRVFit.split("_")[0]),opt.HHWWggLabel,sqrts__,catRVFit)),aset)
+      d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(procRVFit.split("_")[0]),mp,sqrts__,catRVFit)),aset) ##-- The point here is that for HHWWgg, use the same dataset name for all EFT nodes and single higgs as a function of proc name
+  else:
+     d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(procRVFit.split("_")[0]),mp,sqrts__,catRVFit)),aset)
   nominalDatasets[mp] = d.Clone()
   if opt.skipVertexScenarioSplit: datasetRVForFit[mp] = d
   else: datasetRVForFit[mp] = splitRVWV(d,aset,mode="RV")
@@ -164,12 +204,34 @@ for mp in opt.massPoints.split(","):
 # Check if nominal yield > threshold (or if +ve sum of weights). If not then use replacement proc x cat
 if( datasetRVForFit[MHNominal].numEntries() < opt.replacementThreshold  )|( datasetRVForFit[MHNominal].sumEntries() < 0. ):
   nominal_numEntries = datasetRVForFit[MHNominal].numEntries()
+  print rMap['procRVMap'][opt.cat]
   procReplacementFit, catReplacementFit = rMap['procRVMap'][opt.cat], rMap['catRVMap'][opt.cat]
+  
+  ##-- If HHWWgg, set replacement proc to same as one being run 
+  # if ( opt.analysis == 'HHWWgg' ):
+  #   procReplacementFit = opt.proc
+
+  if(opt.analysis == "HHWWgg" and (opt.proc in HHWWgg_singleHiggs_procs)):
+    procReplacementFit = opt.proc
+    # if(opt.proc == "wzh"):
+      # catReplacementFit = "HHWWggTag_SLDNN_2"
+
+  print "replace RV:",procReplacementFit, catReplacementFit
   for mp in opt.massPoints.split(","):
-    WSFileName = glob.glob("%s/output*M%s*%s.root"%(opt.inputWSDir,mp,procReplacementFit))[0]
+    if ( opt.analysis == 'HHWWgg' ):
+      if(opt.proc in HHWWgg_singleHiggs_procs):
+        WSFileName = glob.glob("%s/Shifted*M%s*%s_%s.root"%(opt.inputWSDir,mp,procReplacementFit,opt.cat))[0]
+      else: 
+        WSFileName = glob.glob("%s/Shifted*M%s*%s_%s_%s.root"%(opt.inputWSDir,mp,procReplacementFit,opt.HHWWggLabel,opt.cat))[0]        
+    else:
+        WSFileName = glob.glob("%s/output*M%s*%s.root"%(opt.inputWSDir,mp,procReplacementFit))[0]
     f = ROOT.TFile(WSFileName,"read")
     inputWS = f.Get(inputWSName__)
-    d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(procReplacementFit.split("_")[0]),mp,sqrts__,catReplacementFit)),aset)
+    if ( opt.analysis == 'HHWWgg'):
+      if(opt.proc in HHWWgg_singleHiggs_procs): d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(procReplacementFit.split("_")[0]),mp,sqrts__,catReplacementFit)),aset)
+      else: d = reduceDataset(inputWS.data("%s_%s_%s_%s_%s"%(procToData(procReplacementFit.split("_")[0]),mp,opt.HHWWggLabel,sqrts__,catReplacementFit)),aset)
+    else:
+         d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(procReplacementFit.split("_")[0]),mp,sqrts__,catReplacementFit)),aset)
     if opt.skipVertexScenarioSplit: datasetRVForFit[mp] = d
     else: datasetRVForFit[mp] = splitRVWV(d,aset,mode="RV")
     inputWS.Delete()
@@ -178,10 +240,12 @@ if( datasetRVForFit[MHNominal].numEntries() < opt.replacementThreshold  )|( data
   # Check if replacement dataset has too few entries: if so throw error
   if( datasetRVForFit[MHNominal].numEntries() < opt.replacementThreshold )|( datasetRVForFit[MHNominal].sumEntries() < 0. ):
     print " --> [ERROR] replacement dataset (%s,%s) has too few entries (%g < %g)"%(procReplacementFit,catReplacementFit,datasetRVForFit[MHNominal].numEntries(),opt.replacementThreshold)
-    sys.exit(1)
+    print "SHOULD EXIT HERE"
+    # sys.exit(1) ##-- Not exiting for sequential HHWWgg condor jobs 
 
   else:
     procRVFit, catRVFit = procReplacementFit, catReplacementFit
+
     if opt.skipVertexScenarioSplit: 
       print " --> Too few entries in nominal dataset (%g < %g). Using replacement (proc,cat) = (%s,%s) for extracting shape"%(nominal_numEntries,opt.replacementThreshold,procRVFit,catRVFit)
       for mp in opt.massPoints.split(","):
@@ -205,10 +269,20 @@ else:
 if not opt.skipVertexScenarioSplit:
   datasetWVForFit = od()
   for mp in opt.massPoints.split(","):
-    WSFileName = glob.glob("%s/output*M%s*%s.root"%(opt.inputWSDir,mp,procWVFit))[0]
+    if ( opt.analysis == 'HHWWgg' ):
+      if(opt.proc in HHWWgg_singleHiggs_procs): WSFileName = glob.glob("%s/Shifted*M%s*%s_%s.root"%(opt.inputWSDir,mp,procWVFit,opt.cat))[0]
+      else: WSFileName = glob.glob("%s/Shifted*M%s*%s_%s_%s.root"%(opt.inputWSDir,mp,procWVFit,opt.HHWWggLabel,opt.cat))[0]
+         
+    else:
+         #  WSFileName = glob.glob("%s/output*M%s*%s.root"%(opt.inputWSDir,mp,procWVFit))[0]
+         WSFileName = glob.glob("%s/Shifted*M%s*%s_%s.root"%(opt.inputWSDir,mp,procWVFit,opt.cat))[0]
     f = ROOT.TFile(WSFileName,"read")
     inputWS = f.Get(inputWSName__)
-    d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(procWVFit.split("_")[0]),mp,sqrts__,catWVFit)),aset)
+    if ( opt.analysis == 'HHWWgg' ):
+      if(opt.proc in HHWWgg_singleHiggs_procs): d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(procWVFit.split("_")[0]),mp,sqrts__,catWVFit)),aset)
+      else: d = reduceDataset(inputWS.data("%s_%s_%s_%s_%s"%(procToData(procWVFit.split("_")[0]),mp,opt.HHWWggLabel,sqrts__,catWVFit)),aset)
+    else:
+         d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(procWVFit.split("_")[0]),mp,sqrts__,catWVFit)),aset)
     datasetWVForFit[mp] = splitRVWV(d,aset,mode="WV")
     inputWS.Delete()
     f.Close()
@@ -217,12 +291,31 @@ if not opt.skipVertexScenarioSplit:
   if( datasetWVForFit[MHNominal].numEntries() < opt.replacementThreshold  )|( datasetWVForFit[MHNominal].sumEntries() < 0. ):
     nominal_numEntries = datasetWVForFit[MHNominal].numEntries()
     procReplacementFit, catReplacementFit = rMap['procWV'], rMap['catWV']
+    print "ReplaceWV:",procReplacementFit,catReplacementFit
     for mp in opt.massPoints.split(","):
-      WSFileName = glob.glob("%s/output*M%s*%s.root"%(opt.inputWSDir,mp,procReplacementFit))[0]
+      if ( opt.analysis == 'HHWWgg' ):
+        if(opt.proc in HHWWgg_singleHiggs_procs):
+          WSFileName = glob.glob("%s/Shifted*M%s*%s_%s.root"%(opt.inputWSDir,mp,procWVFit,opt.cat))[0]
+        else: 
+          print "%s/Shifted*M%s*%s_%s_%s.root"%(opt.inputWSDir,mp,procReplacementFit,opt.HHWWggLabel,opt.cat)
+          WSFileName = glob.glob("%s/Shifted*M%s*%s_%s_%s.root"%(opt.inputWSDir,mp,procReplacementFit,opt.HHWWggLabel,opt.cat))[0]
+      else:
+         WSFileName = glob.glob("%s/Shifted*M%s*%s_%s.root"%(opt.inputWSDir,mp,procWVFit,opt.cat))[0]
       f = ROOT.TFile(WSFileName,"read")
       inputWS = f.Get(inputWSName__)
-      d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(procReplacementFit.split("_")[0]),mp,sqrts__,catReplacementFit)),aset)
+      if ( opt.analysis == 'HHWWgg' ):
+        if(opt.proc in HHWWgg_singleHiggs_procs): d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(procReplacementFit.split("_")[0]),mp,sqrts__,catReplacementFit)),aset)
+        else: d = reduceDataset(inputWS.data("%s_%s_%s_%s_%s"%(procToData(procReplacementFit.split("_")[0]),mp,opt.HHWWggLabel,sqrts__,catReplacementFit)),aset)
+      else:
+         d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(procReplacementFit.split("_")[0]),mp,sqrts__,catReplacementFit)),aset)
+         
       datasetWVForFit[mp] = splitRVWV(d,aset,mode="WV")
+      # if ( opt.analysis == 'HHWWgg' ):
+      #   if(opt.proc in HHWWgg_singleHiggs_procs):
+      #   else: 
+      #    datasetWVForFit[mp] = splitRVWV(d,aset,mode="WV")
+      # else:
+      #    datasetWVForFit[mp] = splitRVWV(d,aset,mode="WV")
       inputWS.Delete()
       f.Close()
     # Check if replacement dataset has too few entries: if so throw error
@@ -262,7 +355,7 @@ if not opt.skipBeamspotReweigh:
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # If using nGaussian fit then extract nGaussians from fTest json file
 if not opt.useDCB:
-  with open("%s/outdir_%s/fTest/json/nGauss_%s.json"%(swd__,opt.ext,catRVFit)) as jf: ngauss = json.load(jf)
+  with open("%s/outdir_%s/fTest/json/nGauss_%s_%s.json"%(swd__,opt.ext,procRVFit,catRVFit)) as jf: ngauss = json.load(jf)
   nRV = int(ngauss["%s__%s"%(procRVFit,catRVFit)]['nRV'])
   if opt.skipVertexScenarioSplit: print " --> Fitting function: convolution of nGaussians (%g)"%nRV
   else: 
@@ -298,7 +391,7 @@ if not opt.skipVertexScenarioSplit:
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # FINAL MODEL: construction
 print "\n --> Constructing final model"
-fm = FinalModel(ssfMap,opt.proc,opt.cat,opt.ext,opt.year,sqrts__,nominalDatasets,xvar,MH,MHLow,MHHigh,opt.massPoints,xsbrMap,procSyst,opt.scales,opt.scalesCorr,opt.scalesGlobal,opt.smears,opt.doVoigtian,opt.useDCB,opt.skipVertexScenarioSplit,opt.skipSystematics,opt.doEffAccFromJson)
+fm = FinalModel(ssfMap,opt.proc,opt.cat,opt.HHWWggLabel,opt.ext,opt.year,sqrts__,nominalDatasets,xvar,MH,MHLow,MHHigh,opt.massPoints,xsbrMap,procSyst,opt.scales,opt.scalesCorr,opt.scalesGlobal,opt.smears,opt.doVoigtian,opt.useDCB,opt.skipVertexScenarioSplit,opt.skipSystematics,opt.doEffAccFromJson)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # SAVE: to output workspace

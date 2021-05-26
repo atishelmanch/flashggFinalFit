@@ -21,6 +21,8 @@ def get_options():
   parser.add_option('--doNNLOPS',dest='doNNLOPS', default=False, action="store_true", help='Add NNLOPS weight variable: NNLOPSweight')
   parser.add_option('--doSystematics',dest='doSystematics', default=False, action="store_true", help='Add systematics datasets to output WS')
   parser.add_option('--doSTXSSplitting',dest='doSTXSSplitting', default=False, action="store_true", help='Split output WS per STXS bin')
+  parser.add_option('--UniqueName', dest='UniqueName', default="", help="Unique name for output directories - used in HHWWgg workflow")
+  parser.add_option('--cats', dest='cats', default="", help="Input categories defined as flag")
   return parser.parse_args()
 (opt,args) = get_options()
 
@@ -93,7 +95,16 @@ if opt.inputConfig != '':
     systematicsVars  = _cfg['systematicsVars']
     theoryWeightContainers = _cfg['theoryWeightContainers']
     systematics      = _cfg['systematics']
-    cats             = _cfg['cats']
+
+    if(opt.cats != ''):
+      cats = opt.cats 
+    else:
+      cats             = _cfg['cats']
+
+    for iSys, systematic in enumerate(systematics):
+      yearSyst = systematic.replace("YEAR", opt.year)
+      systematics[iSys] = yearSyst[:]
+      
 
   else:
     print "[ERROR] %s config file does not exist. Leaving..."%opt.inputConfig
@@ -113,8 +124,11 @@ if opt.year == '2018': systematics.append("JetHEM")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # UPROOT file
+# f = uproot.open(opt.inputTreeFile, library = "pandas")
 f = uproot.open(opt.inputTreeFile)
-if inputTreeDir == '': listOfTreeNames == f.keys()
+# print"f:",f
+print "inputTreeDir:",inputTreeDir
+if inputTreeDir == '': listOfTreeNames = f.keys() 
 else: listOfTreeNames = f[inputTreeDir].keys()
 # If cats = 'auto' then determine from list of trees
 if cats == 'auto':
@@ -125,7 +139,8 @@ if cats == 'auto':
     elif "ERROR" in tn: continue
     c = tn.split("_%s_"%sqrts__)[-1].split(";")[0]
     cats.append(c)
-
+else:
+    cats=cats.split(",")
 if opt.doNOTAG:
   # Check if NOTAG tree exists
   for tn in listOfTreeNames:
@@ -145,9 +160,12 @@ for cat in cats:
   print " --> Extracting events from category: %s"%cat
   if inputTreeDir == '': treeName = "%s_%s_%s_%s"%(opt.productionMode,opt.inputMass,sqrts__,cat)
   else: treeName = "%s/%s_%s_%s_%s"%(inputTreeDir,opt.productionMode,opt.inputMass,sqrts__,cat)
+
   print "    * tree: %s"%treeName
   # Extract tree from uproot
-  t = f[treeName]
+  
+  t = f[treeName] 
+
   if len(t) == 0: continue
   
   # Convert tree to pandas dataframe
@@ -162,7 +180,23 @@ for cat in cats:
     dfs[ts].columns = tsColumns
 
   # Main variables to add to nominal RooDataSets
+  if(opt.year == "2018"):
+    if("prefireWeightUp01sigma" in mainVars):
+      mainVars.remove("prefireWeightUp01sigma")
+    if("prefireWeightDown01sigma" in mainVars):
+      mainVars.remove("prefireWeightDown01sigma")
+
+  ##-- Need alternative appraoch for uproot 4 
+  # arr = t.arrays(mainVars)
+
+  # dfs['main'] = pandas.DataFrame(arr)[mainVars] if cat!='NOTAG' else pandas.DataFrame(arr)[notagVars] 
+  # dfs['main'] = pandas.df(arr)[mainVars]
+
+
+  ##-- NOTE This may not work with uproot version 4
   dfs['main'] = t.pandas.df(mainVars) if cat!='NOTAG' else t.pandas.df(notagVars)
+  # dfs['main'] = t.df(mainVars) if cat!='NOTAG' else t.df(notagVars)
+  # dfs['main'] = t.DataFrame(mainVars, library = "pd") if cat!='NOTAG' else t.DataFrame(notagVars, library = "pd")
 
   # Concatenate current dataframes
   df = pandas.concat(dfs.values(), axis=1)
@@ -214,6 +248,7 @@ for cat in cats:
         sdf['cat'] = cat
         sdata = pandas.concat([sdata,sdf], ignore_index=True, axis=0, sort=False)
      
+#  print sdata
 # If not splitting by STXS bin then add dummy column to dataframe
 if not opt.doSTXSSplitting:
   data[stxsVar] = 'nosplit'  
@@ -245,12 +280,16 @@ for stxsId in data[stxsVar].unique():
     
   else:
     df = data
+    #  if opt.doSystematics: sdf = df
     if opt.doSystematics: sdf = sdata
 
     # Define output workspace file
-    outputWSDir = "/".join(opt.inputTreeFile.split("/")[:-1])+"/ws_%s"%dataToProc(opt.productionMode)
+    outputWSDir = "/".join(opt.inputTreeFile.split("/")[:-1])+"/ws_%s_%s"%(opt.productionMode, opt.UniqueName)
+    #  outputWSDir = "/".join(opt.inputTreeFile.split("/")[:-1])+"/ws_%s"%dataToProc(opt.productionMode)
     if not os.path.exists(outputWSDir): os.system("mkdir %s"%outputWSDir)
-    outputWSFile = outputWSDir+"/"+re.sub(".root","_%s.root"%dataToProc(opt.productionMode),opt.inputTreeFile.split("/")[-1])
+    #  outputWSFile = outputWSDir+"/"+re.sub(".root","_%s.root"%dataToProc(opt.productionMode),opt.inputTreeFile.split("/")[-1])
+    # outputWSFile = outputWSDir+"/"+re.sub(".root","_%s.root"%opt.productionMode,opt.inputTreeFile.split("/")[-1]) ##-- adjusting for HHWWgg 
+    outputWSFile = "%s/%s.root"%(outputWSDir, opt.UniqueName)
     print " --> Creating output workspace: (%s)"%outputWSFile
     
   # Open file and initiate workspace
@@ -287,7 +326,7 @@ for stxsId in data[stxsVar].unique():
     del sa
 
     if opt.doSystematics:
-      # b) make RooDataHists for systematic variations
+      print "make RooDataHists for systematic variations"
       if cat == "NOTAG": continue
       for s in systematics:
         for direction in ['Up','Down']:
@@ -305,9 +344,9 @@ for stxsId in data[stxsVar].unique():
           for var in systematicsVars:
             if var != "weight": systematicsVarsDropWeight.append(var)
           aset = make_argset(ws,systematicsVarsDropWeight)
-          
           h = ROOT.RooDataHist(hName,hName,aset)
           for ev in t:
+            #  print "===================",ev
             for v in systematicsVars:
               if v == "weight": continue
               else: ws.var(v).setVal(getattr(ev,v))

@@ -25,7 +25,7 @@ def get_options():
 print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUNNING SIGNAL SCRIPTS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 def leave():
   print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUNNING SIGNAL SCRIPTS (END) ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-  sys.exit(1)
+  # sys.exit(1) ##-- Removing because submitting HHWWgg scripts via condor jobs and want to perform steps sequentially without exiting shell session inbetween 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Extract options from config file:
@@ -41,6 +41,7 @@ if opt.inputConfig != '':
     #Extract options
     options['inputWSDir']   = _cfg['inputWSDir']
     options['procs']        = _cfg['procs']
+    options['HHWWggLabel']  = _cfg['HHWWggLabel']
     options['cats']         = _cfg['cats']
     options['ext']          = _cfg['ext']
     options['analysis']     = _cfg['analysis']
@@ -105,6 +106,7 @@ print " --> Categories: %s"%options['cats']
 print " --> Mass points: %s --> Low = %s, High = %s"%(options['massPoints'],options['massLow'],options['massHigh'])
 print " --> Extension: %s"%options['ext']
 print " --> Analysis: %s"%options['analysis']
+print " --> HHWWggLabel: %s"%options['HHWWggLabel']
 print " --> Year: %s ::: Corresponds to intLumi = %.2f fb^-1"%(options['year'],lumiMap[options['year']])
 if options['mode'] in ['calcPhotonSyst']:
   print " --> Photon shape systematics:"

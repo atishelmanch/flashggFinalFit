@@ -34,9 +34,12 @@ def get_options():
   parser.add_option("--nProcsToFTest", dest='nProcsToFTest', default=5, type='int',help="Number of signal processes to fTest (ordered by sum entries), others are set to nRV=1,nWV=1. Set to -1 to run over all")
   parser.add_option("--cat", dest='cat', default='', help="RECO category")
   parser.add_option('--mass', dest='mass', default='125', help="Mass point to fit")
-  parser.add_option('--doPlots', dest='doPlots', default=False, action="store_true", help="Produce Signal fTest plots")
+  parser.add_option('--HHWWggLabel', dest='HHWWggLabel', default='node_cHHH1_WWgg_lnulnugg', help="HHWWgg Label")
+  parser.add_option('--analysis', dest='analysis', default='STXS', help="analysis type")
+  # parser.add_option('--doPlots', dest='doPlots', default=False, action="store_true", help="Produce Signal fTest plots")
+  parser.add_option('--doPlots', dest='doPlots', default=True, action="store_true", help="Produce Signal fTest plots")
   parser.add_option('--nBins', dest='nBins', default=80, type='int', help="Number of bins for fit")
-  parser.add_option('--threshold', dest='threshold', default=30, type='int', help="Threshold number of events")
+  parser.add_option('--threshold', dest='threshold', default=20, type='int', help="Threshold number of events")
   parser.add_option('--nGaussMax', dest='nGaussMax', default=5, type='int', help="Max number of gaussians to test")
   parser.add_option('--skipWV', dest='skipWV', default=False, action="store_true", help="Skip processing of WV case")
   # Minimizer options
@@ -65,14 +68,34 @@ MH = ROOT.RooRealVar("MH","m_{H}", int(MHLow), int(MHHigh))
 MH.setUnit("GeV")
 MH.setConstant(True)
 
+##-- HHWWgg single higgs definiton 
+##-- For HHWWgg analysis where modelling single higgs processes 
+HHWWgg_singleHiggs_procs = ["ggh", "vbf", "wzh", "tth"]
+
 # Loop over processes: extract sum entries and fill dict. Default nRV,nWV = 1,1
 df = pd.DataFrame(columns=['proc','sumEntries','nRV','nWV'])
 procYields = od()
 for proc in opt.procs.split(","):
-  WSFileName = glob.glob("%s/output*M%s*%s.root"%(opt.inputWSDir,opt.mass,proc))[0]
+  if (opt.analysis == 'HHWWgg'):
+    if(proc in HHWWgg_singleHiggs_procs):
+      WSFileName = glob.glob("%s/output*M%s*%s_%s.root"%(opt.inputWSDir,opt.mass,proc,opt.cat))[0]
+    else: 
+      # print "%s/output*M%s*%s_%s.root"%(opt.inputWSDir,opt.mass,proc,opt.cat) 
+      # print "thing:",glob.glob("%s/output*M%s*%s_%s.root"%(opt.inputWSDir,opt.mass,proc,opt.cat))
+      WSFileName = glob.glob("%s/output*M%s*%s_%s.root"%(opt.inputWSDir,opt.mass,proc,opt.cat))[0]
+  else:
+    WSFileName = glob.glob("%s/output*M%s*%s_%s.root"%(opt.inputWSDir,opt.mass,proc,opt.cat))[0]
   f = ROOT.TFile(WSFileName,"read")
   inputWS = f.Get(inputWSName__)
-  d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(proc.split("_")[0]),opt.mass,sqrts__,opt.cat)),aset)
+  print "WS name:",inputWSName__
+  print opt.analysis
+  if (opt.analysis == 'HHWWgg' ) :
+    if(proc in HHWWgg_singleHiggs_procs): d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(proc.split("_")[0]),opt.mass,sqrts__,opt.cat)),aset)
+    # else: d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(proc.split("_")[0]),opt.HHWWggLabel,sqrts__,opt.cat)),aset)
+    # GluGluToHHTo2G2Qlnu_125_13TeV_HHWWggTag_SLDNN_0
+    else: d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(proc.split("_")[0]),"125",sqrts__,opt.cat)),aset)
+  else:
+     d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(proc.split("_")[0]),opt.mass,sqrts__,opt.cat)),aset)
   df.loc[len(df)] = [proc,d.sumEntries(),1,1]
   inputWS.Delete()
   f.Close()
@@ -86,12 +109,24 @@ for pidx, proc in enumerate(procsToFTest):
 
   # Split dataset to RV/WV: ssf requires input as dict (with mass point as key)
   datasets_RV, datasets_WV = od(), od()
-  WSFileName = glob.glob("%s/output*M%s*%s.root"%(opt.inputWSDir,opt.mass,proc))[0]
+  WSFileName = glob.glob("%s/output*M%s*%s_%s.root"%(opt.inputWSDir,opt.mass,proc,opt.cat))[0]
   f = ROOT.TFile(WSFileName,"read")
   inputWS = f.Get(inputWSName__)
-  d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(proc.split("_")[0]),opt.mass,sqrts__,opt.cat)),aset)
-  datasets_RV[opt.mass] = splitRVWV(d,aset,mode="RV")
-  datasets_WV[opt.mass] = splitRVWV(d,aset,mode="WV")
+  if (opt.analysis == 'HHWWgg'):
+    if(proc in HHWWgg_singleHiggs_procs): d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(proc.split("_")[0]),opt.mass,sqrts__,opt.cat)),aset)
+    # else: d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(proc.split("_")[0]),opt.HHWWggLabel,sqrts__,opt.cat)),aset)
+    else: d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(proc.split("_")[0]),"125",sqrts__,opt.cat)),aset)
+  else:
+     d = reduceDataset(inputWS.data("%s_%s_%s_%s"%(procToData(proc.split("_")[0]),opt.mass,sqrts__,opt.cat)),aset)
+  if (opt.analysis == 'HHWWgg'):  
+    print "========================================="
+    print "HHWWgg analysis , so do not split RV and WV"
+    print "========================================="
+    datasets_WV[opt.mass] = splitRVWV(d,aset,mode="WV")
+    datasets_RV[opt.mass] = d
+  else:
+    datasets_RV[opt.mass] = splitRVWV(d,aset,mode="RV")
+    datasets_WV[opt.mass] = splitRVWV(d,aset,mode="WV")
 
   # Run fTest: RV
   # If numEntries below threshold then keep as n = 1
@@ -120,6 +155,7 @@ for pidx, proc in enumerate(procsToFTest):
 
   # Run fTest: WV
   # If numEntries below threshold then keep as n = 1
+  print "WV events:",datasets_WV[opt.mass].numEntries()
   if( datasets_WV[opt.mass].numEntries() < opt.threshold )|( opt.skipWV ): continue
   else:
     ssfs = od()
@@ -149,7 +185,10 @@ for pidx, proc in enumerate(procsToFTest):
 
 # Make output
 if not os.path.isdir("%s/outdir_%s/fTest/json"%(swd__,opt.ext)): os.system("mkdir %s/outdir_%s/fTest/json"%(swd__,opt.ext))
-ff = open("%s/outdir_%s/fTest/json/nGauss_%s.json"%(swd__,opt.ext,opt.cat),"w")
+if( opt.analysis == 'HHWWgg'):
+    ff = open("%s/outdir_%s/fTest/json/nGauss_%s_%s.json"%(swd__,opt.ext,opt.procs,opt.cat),"w")
+else:
+    ff = open("%s/outdir_%s/fTest/json/nGauss_%s.json"%(swd__,opt.ext,opt.cat),"w")
 ff.write("{\n")
 # Iterate over rows in dataframe: sorted by sumEntries
 pitr = 1
